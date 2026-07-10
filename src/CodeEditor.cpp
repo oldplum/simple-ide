@@ -3,5 +3,22 @@
 CodeEditor::CodeEditor(QWidget *parent)
     : QPlainTextEdit(parent)
 {
-    //暂时什么都不做，后面会在这里加行号、缩进等功能
+    connect(this, &QPlainTextEdit::cursorPositionChanged, 
+            this, &CodeEditor::highlightCurrentline);
+    
+    highlightCurrentline();
+}
+
+void CodeEditor::highlightCurrentline(){
+    QList<QTextEdit::ExtraSelection> selections;
+
+    QTextEdit::ExtraSelection selection;
+
+    selection.format.setBackground(QColor(232, 232, 232));
+    selection.format.setProperty(QTextFormat::FullWidthSelection, true);
+    selection.cursor = textCursor();
+    selection.cursor.clearSelection();
+    selections.append(selection);
+
+    setExtraSelections(selections);
 }
