@@ -1,0 +1,15 @@
+# 构建目录
+build/
+
+# Qt 生成的临时文件（防止有人不小心在根目录编译）
+*.o
+moc_*
+moc_predefs.h
+.qmake.stash
+Makefile
+simple_ide
+
+# 编辑器临时文件
+*.swp
+*.user
+*~
