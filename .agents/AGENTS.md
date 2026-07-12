@@ -23,12 +23,15 @@ simple_ide/
 ├── src/                 # .cpp 源文件
 │   ├── main.cpp         # 程序入口
 │   ├── CodeEditor.cpp   # 编辑器控件实现
-│   └── Highlighter.cpp  # 语法高亮实现（空文件，待开发）
+│   ├── Highlighter.cpp  # 语法高亮实现（空文件，待开发）
+│   └── CatWidget.cpp    # 电子猫咪控件实现（待开发）
 ├── include/             # .h 头文件
 │   ├── CodeEditor.h     # 编辑器控件声明
-│   └── Highlighter.h    # 语法高亮声明
+│   ├── Highlighter.h    # 语法高亮声明
+│   └── CatWidget.h      # 电子猫咪控件声明（待开发）
 ├── ui/                  # Qt Designer 的 .ui 文件（暂空）
-├── resources/           # 静态资源（暂空）
+├── resources/           # 静态资源
+│   └── cat_gifs/        # 猫咪各情绪状态的 GIF 动图
 ├── docs/                # 项目文档
 │   ├── 项目要求.md       # 完整功能需求
 │   ├── 项目分工.md       # 双人开发分工策略
@@ -71,9 +74,10 @@ make -j$(nproc)
 ### 核心类关系
 ```
 QMainWindow
-  └── QTabWidget (多标签页)
-        └── CodeEditor (继承自 QPlainTextEdit)
-              └── Highlighter (继承自 QSyntaxHighlighter，绑定到 document)
+  ├── QTabWidget (多标签页)
+  │     └── CodeEditor (继承自 QPlainTextEdit)
+  │           └── Highlighter (继承自 QSyntaxHighlighter，绑定到 document)
+  └── CatWidget (电子猫咪，QLabel + QMovie + 状态机)
 ```
 
 ### 已实现功能
@@ -96,6 +100,11 @@ QMainWindow
 - [ ] 编码支持（UTF-8 / GBK）
 - [ ] 会话恢复（可选）
 - [ ] 代码折叠（可选高级功能）
+- [ ] 电子猫咪互动系统（`CatWidget`：QLabel + QMovie + 有限状态机）
+  - [ ] 猫咪 GIF 动画界面（悬浮于编辑器右下角或 QDockWidget 侧边栏）
+  - [ ] 情绪状态机（默认/开心/生气/饥饿 四种状态）
+  - [ ] 互动触发逻辑（括号匹配→开心，狂删代码→生气，定时器→饥饿）
+  - [ ] 投喂猫粮功能（按钮或快捷键 Ctrl+Shift+F，重置饥饿倒计时）
 
 ## 注意事项
 
