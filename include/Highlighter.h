@@ -22,6 +22,8 @@ private:
         QTextCharFormat format;
     };
     QVector<HighlightRule> m_rules;
+
+    QTextCharFormat multiLineCommentFormat;
 };
 
 #endif //HIGHLIGHTER_H

@@ -102,17 +102,50 @@ Highlighter::Highlighter(QTextDocument *parent): QSyntaxHighlighter(parent)
     commentRule.pattern = QRegularExpression("//[^\n]*");
     commentRule.format = commentFormat;
     m_rules.append(commentRule);
-    
+
+    //多行注释格式初始化
+    multiLineCommentFormat.setForeground(QColor(128, 128, 128));
+    multiLineCommentFormat.setFontItalic(true);
 }
 
 void Highlighter::highlightBlock(const QString &text)
 {
-    // 遍历所有单行高亮规则
+    // 1.遍历所有单行高亮规则
     for (const HighlightRule &rule : m_rules) {
         QRegularExpressionMatchIterator it = rule.pattern.globalMatch(text);
         while (it.hasNext()) {
             QRegularExpressionMatch match = it.next();
             setFormat(match.capturedStart(), match.capturedLength(), rule.format);
         }
+    }
+
+    // 2.处理多行注释（状态 1 代表在注释里，状态 0 或 -1 代表在普通代码里）
+    setCurrentBlockState(0);
+    QRegularExpression commentStart("/\\*");  // 匹配 /*
+    QRegularExpression commentEnd("\\*/");    // 匹配 */
+    int startIndex = 0;
+    // 如果上一行已经是多行注释状态（状态为 1），那么本行从开头（0）就开始算作注释
+    if (previousBlockState() != 1) {
+        QRegularExpressionMatch startMatch = commentStart.match(text);
+        startIndex = startMatch.hasMatch() ? startMatch.capturedStart() : -1;
+    }
+    // 循环寻找注释的结束位置 */
+    while (startIndex >= 0) {
+        QRegularExpressionMatch endMatch = commentEnd.match(text, startIndex);
+        int endIndex = endMatch.hasMatch() ? endMatch.capturedStart() : -1;
+        int commentLength;
+        if (endIndex == -1) {
+            // 如果本行没有找到结束符 */，说明注释一直延续到行尾，并通知下一行继续
+            setCurrentBlockState(1);
+            commentLength = text.length() - startIndex;
+        } else {
+            // 找到了结束符 */，计算这一段注释的长度
+            commentLength = endIndex - startIndex + endMatch.capturedLength();
+        }
+        // 涂上灰色斜体
+        setFormat(startIndex, commentLength, multiLineCommentFormat);
+        // 继续在当前行剩下的地方找有没有下一个 /* 
+        QRegularExpressionMatch nextStart = commentStart.match(text, startIndex + commentLength);
+        startIndex = nextStart.hasMatch() ? nextStart.capturedStart() : -1;
     }
 }

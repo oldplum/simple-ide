@@ -3,7 +3,7 @@
 
 #include <QPlainTextEdit>
 
-class CodeEditor : public QPlainTextEdit
+class CodeEditor: public QPlainTextEdit
 {
     Q_OBJECT
 
@@ -25,10 +25,10 @@ private:
 };
 
 // 行号区域控件，转发绘制事件给 CodeEditor
-class LineNumberArea : public QWidget
+class LineNumberArea: public QWidget
 {
 public:
-    LineNumberArea(CodeEditor *editor) : QWidget(editor), codeEditor(editor) {}
+    LineNumberArea(CodeEditor *editor): QWidget(editor), codeEditor(editor) {}
     QSize sizeHint() const override {
         return QSize(codeEditor->LineNumberAreaWidth(), 0);
     }

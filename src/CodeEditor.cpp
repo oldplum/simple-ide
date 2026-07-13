@@ -75,8 +75,7 @@ void CodeEditor::resizeEvent(QResizeEvent *event)
 {
     QPlainTextEdit::resizeEvent(event);
     QRect cr = contentsRect();
-    lineNumberArea->setGeometry(QRect(cr.left(), cr.top(),
-                                      LineNumberAreaWidth(), cr.height()));
+    lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), LineNumberAreaWidth(), cr.height()));
 }
 
 // 绘制行号
