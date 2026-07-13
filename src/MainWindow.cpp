@@ -90,7 +90,10 @@ void MainWindow::openFile()
     QString content=stream.readAll();
     file.close();
     CodeEditor *editor=new CodeEditor(ui->tabWidget);
-    new Highlighter(editor->document());  // 给新打开的文件绑定语法高亮
+    // 提取文件后缀名传给高亮器，比如 "cpp", "json", "py"
+    QString ext = QFileInfo(filePath).suffix();
+    new Highlighter(editor->document(), ext);
+
     editor->setPlainText(content);
     editor->setProperty("filePath",filePath);
     editor->document()->setModified(false);

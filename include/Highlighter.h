@@ -11,7 +11,7 @@ class Highlighter: public QSyntaxHighlighter
     Q_OBJECT
 
 public:
-    explicit Highlighter(QTextDocument *parent = nullptr);
+    explicit Highlighter(QTextDocument *parent = nullptr, const QString &extension = QString());
 
 protected:
     void highlightBlock(const QString &text) override;
@@ -24,6 +24,10 @@ private:
     QVector<HighlightRule> m_rules;
 
     QTextCharFormat multiLineCommentFormat;
+
+    QRegularExpression commentStartExpression;
+    QRegularExpression commentEndExpression;
+
 };
 
 #endif //HIGHLIGHTER_H
