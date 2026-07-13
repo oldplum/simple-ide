@@ -2,6 +2,7 @@
 #include <QPainter>
 #include <QResizeEvent>
 #include <QTextBlock>
+#include <QKeyEvent>
 
 CodeEditor::CodeEditor(QWidget *parent)
     : QPlainTextEdit(parent)
@@ -43,7 +44,7 @@ int CodeEditor::LineNumberAreaWidth()
 {
     int digits = 1;
     int maxLines = qMax(1, blockCount());
-    while (maxLines >= 10) {
+    while (maxLines >= 10){
         maxLines /= 10;
         ++digits;
     }
@@ -60,12 +61,12 @@ void CodeEditor::updateLineNumberAreaWidth(int /* newBlockCount */)
 // 滚动时同步更新行号栏
 void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
 {
-    if (dy) {
+    if (dy){
         lineNumberArea->scroll(0, dy);
-    } else {
+    } else{
         lineNumberArea->update(0, rect.y(), lineNumberArea->width(), rect.height());
     }
-    if (rect.contains(viewport()->rect())) {
+    if (rect.contains(viewport()->rect())){
         updateLineNumberAreaWidth(0);
     }
 }
@@ -89,8 +90,8 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
     int top = qRound(blockBoundingGeometry(block).translated(contentOffset()).top());
     int bottom = top + qRound(blockBoundingRect(block).height());
 
-    while (block.isValid() && top <= event->rect().bottom()) {
-        if (block.isVisible() && bottom >= event->rect().top()) {
+    while (block.isValid() && top <= event->rect().bottom()){
+        if (block.isVisible() && bottom >= event->rect().top()){
             QString number = QString::number(blockNumber + 1);
             painter.setPen(Qt::darkGray);
             painter.drawText(0, top, lineNumberArea->width(), fontMetrics().height(), Qt::AlignRight, number);
@@ -100,4 +101,37 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
         bottom = top + qRound(blockBoundingRect(block).height());
         ++blockNumber;
     }
+}
+
+//实现回车时自动缩进
+void CodeEditor::keyPressEvent(QKeyEvent *e)
+{
+    // 1. 如果按下的是回车键
+    if (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter){
+        // 获取光标所在行的文本
+        QTextCursor cursor = textCursor();
+        QString lineText = cursor.block().text();
+
+        // 提取这行开头的缩进（把空格和 Tab 收集起来）
+        QString indentation;
+        for (int i = 0; i < lineText.length(); ++i){
+            if (lineText.at(i).isSpace()){
+                indentation += lineText.at(i);
+            } else{
+                break;
+            }
+        }
+
+        // 先让底层的编辑器完成“真正的换行”操作
+        QPlainTextEdit::keyPressEvent(e);
+
+        // 然后在刚刚换下来的新行里，填入和上一行一模一样的空格
+        if (!indentation.isEmpty()){
+            insertPlainText(indentation);
+        }
+        return;
+    }
+
+    // 2. 如果是其他按键，正常处理
+    QPlainTextEdit::keyPressEvent(e);
 }

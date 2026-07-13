@@ -19,6 +19,7 @@ private slots:
 
 protected:
     void resizeEvent(QResizeEvent *event) override; //窗口缩放时调整行号栏
+    void keyPressEvent(QKeyEvent *event) override;  //拦截按键事件（实现自动缩进）
 
 private:
     QWidget *lineNumberArea; //行号栏控制指针
