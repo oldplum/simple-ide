@@ -1,17 +1,14 @@
 #include <QApplication>
-#include "CodeEditor.h"
-#include "Highlighter.h"
+#include "MainWindow.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
 
-    CodeEditor editor;
-    Highlighter *highlighter = new Highlighter(editor.document());
-    
-    editor.setWindowTitle("CodeEditor Test");
-    editor.resize(800, 600);
-    editor.show();
+    MainWindow window;
+    window.setWindowTitle("Simple IDE");
+    window.resize(800, 600);
+    window.show();
 
     return app.exec();
 }

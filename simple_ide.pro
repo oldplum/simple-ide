@@ -9,9 +9,14 @@ INCLUDEPATH += include
 
 HEADERS += \
     include/CodeEditor.h \
-    include/Highlighter.h
+    include/Highlighter.h \
+    include/MainWindow.h
 
 SOURCES += \
     src/main.cpp \
     src/CodeEditor.cpp \
-    src/Highlighter.cpp
+    src/Highlighter.cpp \
+    src/MainWindow.cpp
+
+FORMS += \
+    ui/MainWindow.ui
