@@ -38,7 +38,70 @@ Highlighter::Highlighter(QTextDocument *parent, const QString &extension)
         commentEndExpression = QRegularExpression();
     }
 
-    // 分支2：如果是 C++ / Java / C 等其他语言
+    // 分支2：如果是Python文件
+    else if (ext == "py") {
+        // 1. Python 关键字 -> 卡布应援色加粗
+        QTextCharFormat keywordFormat;
+        keywordFormat.setForeground(QColor(34, 66, 148));
+        keywordFormat.setFontWeight(QFont::Bold);
+        QStringList keywords;
+        keywords << "\\bdef\\b"     << "\\bclass\\b"  << "\\bimport\\b" << "\\bfrom\\b" 
+                 << "\\bif\\b"      << "\\belif\\b"   << "\\belse\\b"   << "\\bfor\\b" 
+                 << "\\bwhile\\b"   << "\\breturn\\b" << "\\btry\\b"    << "\\bexcept\\b" 
+                 << "\\bfinally\\b" << "\\bas\\b"     << "\\bin\\b"     << "\\bis\\b" 
+                 << "\\bnot\\b"     << "\\band\\b"    << "\\bor\\b"     << "\\bpass\\b"
+                 << "\\bwith\\b";
+        for (const QString &kw : keywords){
+            HighlightRule rule;
+            rule.pattern = QRegularExpression(kw);
+            rule.format = keywordFormat;
+            m_rules.append(rule);
+        }
+
+        // 2. Python 内置类型和常用函数 -> 深青色
+        QTextCharFormat typeFormat;
+        typeFormat.setForeground(QColor(0, 128, 128));
+        QStringList types;
+        types << "\\bint\\b"  << "\\bfloat\\b" << "\\bstr\\b"   << "\\blist\\b" 
+              << "\\bdict\\b" << "\\bset\\b"   << "\\btuple\\b" << "\\bbool\\b" 
+              << "\\bNone\\b" << "\\bTrue\\b"  << "\\bFalse\\b" << "\\bprint\\b" 
+              << "\\blen\\b";
+        for (const QString &t : types){
+            HighlightRule rule;
+            rule.pattern = QRegularExpression(t);
+            rule.format = typeFormat;
+            m_rules.append(rule);
+        }
+
+        // 3. 单行注释 (# 开头) -> 灰色斜体
+        HighlightRule commentRule;
+        commentRule.pattern = QRegularExpression("#[^\n]*");
+        commentRule.format.setForeground(QColor(128, 128, 128));
+        commentRule.format.setFontItalic(true);
+        m_rules.append(commentRule);
+
+        // 4. 字符串 (单双引号) -> 深红色
+        //    加了断言，避免把三引号 """ 的前两个引号误认为空字符串
+        QTextCharFormat stringFormat;
+        stringFormat.setForeground(QColor(180, 0, 0));
+        HighlightRule doubleQuoteRule;
+        doubleQuoteRule.pattern = QRegularExpression("(?<!\")\"(?!\"\")(?:[^\"\\\\]|\\\\.)*\"");
+        doubleQuoteRule.format = stringFormat;
+        m_rules.append(doubleQuoteRule);
+        
+        HighlightRule singleQuoteRule;
+        singleQuoteRule.pattern = QRegularExpression("(?<!')'(?!'')(?:[^'\\\\]|\\\\.)*'");
+        singleQuoteRule.format = stringFormat;
+        m_rules.append(singleQuoteRule);
+
+        // 5. Python 多行三引号字符串（和 VS Code 一样，当成字符串渲染成深红色）
+        multiLineCommentFormat.setForeground(QColor(180, 0, 0));
+        multiLineCommentFormat.setFontItalic(false);
+        commentStartExpression = QRegularExpression("\"\"\"");
+        commentEndExpression = QRegularExpression("\"\"\"");
+    }
+
+    // 分支3：如果是 C++ / Java / C 等其他语言
     else {
         // 关键字（周深应援色，加粗）
         QTextCharFormat keywordFormat;
@@ -160,32 +223,45 @@ void Highlighter::highlightBlock(const QString &text)
     // 如果当前语言没有多行注释（比如 JSON），直接结束
     if (commentStartExpression.pattern().isEmpty())
         return;
-    // 2.处理多行注释
+
+    // 2.处理多行注释 / 多行字符串
     setCurrentBlockState(0);
-    // 把下面所有原来用到 commentStart / commentEnd 的地方，都加上 Expression 后缀！
     int startIndex = 0;
-    // 如果上一行已经是多行注释状态（状态为 1），那么本行从开头（0）就开始算作注释
-    if (previousBlockState() != 1) {
+    bool continuingFromPrevious = (previousBlockState() == 1);
+
+    // 如果上一行不是多行注释状态，那就从本行开头找开始符
+    if (!continuingFromPrevious) {
         QRegularExpressionMatch startMatch = commentStartExpression.match(text);
         startIndex = startMatch.hasMatch() ? startMatch.capturedStart() : -1;
     }
-    // 循环寻找注释的结束位置 */
+
     while (startIndex >= 0) {
-        QRegularExpressionMatch endMatch = commentEndExpression.match(text, startIndex);
+        // 如果是延续上一行的多行注释，从当前位置开始找结束符
+        // 否则跳过开始符的长度，避免 Python """ 把同一个位置当成结束
+        int endSearchStart;
+        if (continuingFromPrevious) {
+            endSearchStart = startIndex;
+        } else {
+            QRegularExpressionMatch sm = commentStartExpression.match(text, startIndex);
+            endSearchStart = startIndex + sm.capturedLength();
+        }
+
+        QRegularExpressionMatch endMatch = commentEndExpression.match(text, endSearchStart);
         int endIndex = endMatch.hasMatch() ? endMatch.capturedStart() : -1;
         int commentLength;
         if (endIndex == -1) {
-            // 如果本行没有找到结束符 */，说明注释一直延续到行尾，并通知下一行继续
+            // 本行没有找到结束符，注释延续到行尾，通知下一行继续
             setCurrentBlockState(1);
             commentLength = text.length() - startIndex;
         } else {
-            // 找到了结束符 */，计算这一段注释的长度
+            // 找到了结束符，计算这一段的长度
             commentLength = endIndex - startIndex + endMatch.capturedLength();
         }
-        // 涂上灰色斜体
         setFormat(startIndex, commentLength, multiLineCommentFormat);
-        // 继续在当前行剩下的地方找有没有下一个 /* 
+
+        // 继续在当前行剩下的地方找有没有下一个开始符
         QRegularExpressionMatch nextStart = commentStartExpression.match(text, startIndex + commentLength);
         startIndex = nextStart.hasMatch() ? nextStart.capturedStart() : -1;
+        continuingFromPrevious = false; // 后续的匹配都是新的开始
     }
 }
