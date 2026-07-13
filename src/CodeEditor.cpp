@@ -3,6 +3,8 @@
 #include <QResizeEvent>
 #include <QTextBlock>
 #include <QKeyEvent>
+#include <QMessageBox>
+#include <QRegularExpression>
 
 CodeEditor::CodeEditor(QWidget *parent)
     : QPlainTextEdit(parent)
@@ -223,4 +225,137 @@ void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
         selections.append(sel1);
         selections.append(sel2);
     }
+}
+
+// 1. 查找下一个/上一个
+void CodeEditor::findNext(const QString &text, bool caseSensitive, bool wholeWord, bool useRegex, bool backward)
+{
+    QTextDocument::FindFlags flags;
+    if (backward)
+        flags |= QTextDocument::FindBackward;
+    if (caseSensitive)
+        flags |= QTextDocument::FindCaseSensitively;
+    if (wholeWord)
+        flags |= QTextDocument::FindWholeWords;
+
+    bool found = false;
+    if (useRegex){
+        QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+        if (!caseSensitive) 
+            options |= QRegularExpression::CaseInsensitiveOption;
+        QRegularExpression regex(text, options);
+        found = find(regex, flags);
+    }
+    else
+        found = find(text, flags);
+
+    // 体验优化：如果查到末尾没找到，我们回绕（Wrap-around）从头/尾继续找
+    if (!found){
+        QTextCursor cursor = textCursor();
+        int savedPos = cursor.position();
+
+        // 移到文档开头（向下找）或文档末尾（向上找）
+        cursor.movePosition(backward ? QTextCursor::End : QTextCursor::Start);
+        setTextCursor(cursor);
+
+        // 重新查找一次
+        if (useRegex){
+            QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+            if (!caseSensitive)
+                options |= QRegularExpression::CaseInsensitiveOption;
+            QRegularExpression regex(text, options);
+            found = find(regex, flags);
+        } 
+        else
+            found = find(text, flags);
+
+        // 如果真的不存在，还原光标位置，并弹窗提示
+        if (!found){
+            cursor.setPosition(savedPos);
+            setTextCursor(cursor);
+            QMessageBox::information(this, tr("查找"), tr("找不到目标内容。"));
+        }
+    }
+}
+
+// 2. 替换当前选中项（并自动跳到下一个）
+void CodeEditor::replace(const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex)
+{
+    QTextCursor cursor = textCursor();
+    
+    // 判断当前光标选中的文本，是否就是我们要查找的内容
+    if (cursor.hasSelection()){
+        QString selected = cursor.selectedText();
+        bool match = false;
+        
+        if (useRegex){
+            QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+            if (!caseSensitive)
+                options |= QRegularExpression::CaseInsensitiveOption;
+            QString pattern = text;
+            if (wholeWord)
+                pattern = "\\b" + pattern + "\\b";
+            QRegularExpression regex("^" + pattern + "$", options);
+            match = regex.match(selected).hasMatch();
+        } 
+        else{
+            Qt::CaseSensitivity cs = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+            match = (selected.compare(text, cs) == 0);
+            
+            if (match && wholeWord){
+                // 如果是全词匹配，要确保它有单词边界
+                QRegularExpression regex("\\b" + QRegularExpression::escape(text) + "\\b", 
+                    caseSensitive ? QRegularExpression::NoPatternOption : QRegularExpression::CaseInsensitiveOption);
+                match = regex.match(selected).hasMatch();
+            }
+        }
+
+        // 如果光标处选中的词刚好匹配，直接替换
+        if (match){
+            cursor.insertText(replaceText);
+        }
+    }
+    
+    // 替换后自动查找下一个
+    findNext(text, caseSensitive, wholeWord, useRegex, false);
+}
+
+// 3. 全部替换
+void CodeEditor::replaceAll(const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex)
+{
+    QTextCursor originalCursor = textCursor();
+    
+    // 将光标瞬间定位到文档开头
+    QTextCursor searchCursor(document());
+    searchCursor.movePosition(QTextCursor::Start);
+    setTextCursor(searchCursor);
+
+    int count = 0;
+    QTextDocument::FindFlags flags;
+    if (caseSensitive)
+        flags |= QTextDocument::FindCaseSensitively;
+    if (wholeWord)
+        flags |= QTextDocument::FindWholeWords;
+
+    bool found = false;
+    do{
+        if (useRegex){
+            QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
+            if (!caseSensitive)
+                options |= QRegularExpression::CaseInsensitiveOption;
+            QRegularExpression regex(text, options);
+            found = find(regex, flags);
+        } 
+        else
+            found = find(text, flags);
+
+        if (found){
+            textCursor().insertText(replaceText);
+            count++;
+        }
+    }while (found);
+
+    // 替换完成后，将光标还原回用户之前在的位置，并弹窗汇报战果
+    setTextCursor(originalCursor);
+    QMessageBox::information(this, tr("全部替换"), tr("替换完成！共替换了 %1 处。").arg(count));
 }

@@ -10,13 +10,15 @@ INCLUDEPATH += include
 HEADERS += \
     include/CodeEditor.h \
     include/Highlighter.h \
-    include/MainWindow.h
+    include/MainWindow.h \
+    include/FindReplaceDialog.h
 
 SOURCES += \
     src/main.cpp \
     src/CodeEditor.cpp \
     src/Highlighter.cpp \
-    src/MainWindow.cpp
+    src/MainWindow.cpp \
+    src/FindReplaceDialog.cpp
 
 FORMS += \
     ui/MainWindow.ui

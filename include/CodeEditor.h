@@ -12,6 +12,11 @@ public:
     int LineNumberAreaWidth(); //计算行号栏长度
     void LineNumberAreaPaintEvent(QPaintEvent *event); //绘制行号栏
 
+public slots:
+    void findNext(const QString &text, bool caseSensitive, bool wholeWord, bool useRegex, bool backward);
+    void replace(const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex);
+    void replaceAll(const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex);
+
 private slots:
     void highlightCurrentline();
     void updateLineNumberAreaWidth(int newBlockCount);  // 行数变化时更新宽度
