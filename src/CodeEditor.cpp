@@ -446,13 +446,14 @@ void CodeEditor::updateFoldedBlocksVisibility()
         FoldingUserData *data = dynamic_cast<FoldingUserData*>(block.userData());
         
         if (hideLevel != -1){
-            if (data && data->foldingLevel() <= hideLevel){
-                // 嵌套层级退回了，说明折叠块结束
-                hideLevel = -1;
-                block.setVisible(true);
+            // 如果遇到了包含 '}' 且层级刚好退回来的闭合行
+            if (data && data->foldingLevel() == hideLevel + 1 && block.text().contains('}')) {
+                block.setVisible(true); // 闭合行保持可见！
+                hideLevel = -1;        // 在这里结束隐藏状态
             } 
-            else
+            else {
                 block.setVisible(false);
+            }
         } 
         else{
             block.setVisible(true);
