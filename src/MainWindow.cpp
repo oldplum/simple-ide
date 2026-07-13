@@ -11,6 +11,8 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QTextStream>
+#include <QStatusBar>
+#include <QTextCursor>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -24,6 +26,12 @@ MainWindow::MainWindow(QWidget *parent)
             &QTabWidget::tabCloseRequested,
             this,
             &MainWindow::closeTab);
+    connect(ui->tabWidget,
+            &QTabWidget::currentChanged,
+            this,
+            [this](int) {
+                updateCursorPosition();
+            });
     QMenu *fileMenu = menuBar()->addMenu(tr("文件(&F)"));
     QMenu *editMenu =menuBar()->addMenu(tr("编辑(&E)"));
     QAction *undoAction = editMenu->addAction(tr("撤销(&U)"));
@@ -59,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
             editor->copy();
         }
     });
-    QAction *pasteAction=editMenu->addAction(tr("复制(&V)"));
+    QAction *pasteAction=editMenu->addAction(tr("粘贴(&V)"));
     pasteAction->setShortcut(QKeySequence::Paste);
     connect(pasteAction,&QAction::triggered,this,[this](){
        CodeEditor *editor=currentEditor();
@@ -141,6 +149,10 @@ CodeEditor *MainWindow::currentEditor() const
 void MainWindow::newFile()
 {
     CodeEditor *editor=new CodeEditor(ui->tabWidget);
+    connect(editor,
+                &QPlainTextEdit::cursorPositionChanged,
+                this,
+                &MainWindow::updateCursorPosition);
     connect(editor->document(),
             &QTextDocument::modificationChanged,
             this,
@@ -287,6 +299,10 @@ void MainWindow::openFile()
     QString content=stream.readAll();
     file.close();
     CodeEditor *editor=new CodeEditor(ui->tabWidget);
+    connect(editor,
+            &QPlainTextEdit::cursorPositionChanged,
+            this,
+            &MainWindow::updateCursorPosition);
     editor->setPlainText(content);
     editor->setProperty("filePath",filePath);
     editor->document()->setModified(false);
@@ -337,4 +353,18 @@ void MainWindow::saveFileAs()
                     QFileInfo(filePath).fileName()
                     );
     }
+}
+void MainWindow::updateCursorPosition()
+{
+    CodeEditor *editor=currentEditor();
+    if(editor==nullptr){
+        statusBar()->showMessage(tr("就绪"));
+        return;
+    }
+    QTextCursor cursor=editor->textCursor();
+    int line =cursor.blockNumber()+1;
+    int column=cursor.positionInBlock()+1;
+    statusBar()->showMessage(
+        tr("第%1行，第%2列").arg(line).arg(column)
+        );
 }
