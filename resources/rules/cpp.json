@@ -1,0 +1,72 @@
+{
+  "_comment": "C++ 语法高亮规则配置文件",
+  "singleLineRules": [
+    {
+      "_comment": "1. 关键字 (周深应援色，加粗)",
+      "pattern": "\\b(auto|break|case|catch|class|const|constexpr|continue|default|delete|do|else|enum|explicit|extern|for|friend|goto|if|inline|namespace|new|noexcept|nullptr|operator|override|private|protected|public|return|sizeof|static|struct|switch|template|this|throw|try|typedef|typename|union|using|virtual|volatile|while)\\b",
+      "format": {
+        "foreground": "#224294",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "_comment": "2. 数据类型 (深青色)",
+      "pattern": "\\b(bool|char|double|float|int|long|short|signed|unsigned|void|size_t|string|true|false)\\b",
+      "format": {
+        "foreground": "#008080"
+      }
+    },
+    {
+      "_comment": "3. 预处理指令 (深绿色)",
+      "pattern": "^\\s*#\\s*\\w+",
+      "format": {
+        "foreground": "#008000"
+      }
+    },
+    {
+      "_comment": "4. 数字字面量 (深品红色)",
+      "pattern": "\\b[0-9]+\\.?[0-9]*\\b",
+      "format": {
+        "foreground": "#A000A0"
+      }
+    },
+    {
+      "_comment": "5. 函数名 (蓝色)",
+      "pattern": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\s*(?=\\()",
+      "format": {
+        "foreground": "#0064C8"
+      }
+    },
+    {
+      "_comment": "6. 双引号字符串字面量 (深红色)",
+      "pattern": "\"(?:[^\"\\\\]|\\\\.)*\"",
+      "format": {
+        "foreground": "#B40000"
+      }
+    },
+    {
+      "_comment": "7. 单引号字符字面量 (深红色)",
+      "pattern": "'(?:[^'\\\\]|\\\\.)*'",
+      "format": {
+        "foreground": "#B40000"
+      }
+    },
+    {
+      "_comment": "8. 单行注释 (灰色斜体)",
+      "pattern": "//[^\\n]*",
+      "format": {
+        "foreground": "#808080",
+        "fontItalic": true
+      }
+    }
+  ],
+  "multiLineComment": {
+    "_comment": "9. 多行注释块 (灰色斜体)",
+    "startPattern": "/\\*",
+    "endPattern": "\\*/",
+    "format": {
+      "foreground": "#808080",
+      "fontItalic": true
+    }
+  }
+}

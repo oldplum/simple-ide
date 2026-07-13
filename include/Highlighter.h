@@ -21,6 +21,7 @@ private:
         QRegularExpression pattern;
         QTextCharFormat format;
     };
+    void loadRulesFromFile(const QString &ext); // 从外部 JSON 文件加载规则的方法
     QVector<HighlightRule> m_rules;
 
     QTextCharFormat multiLineCommentFormat;
