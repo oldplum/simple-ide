@@ -102,7 +102,7 @@ Highlighter::Highlighter(QTextDocument *parent, const QString &extension)
     }
 
     // 分支3：如果是 C++ / Java / C 等其他语言
-    else {
+    else if (ext == "cpp" || ext == "c" || ext == "h" || ext == "cc" || ext == "hpp"){
         // 关键字（周深应援色，加粗）
         QTextCharFormat keywordFormat;
         keywordFormat.setForeground(QColor(34, 66, 148));
