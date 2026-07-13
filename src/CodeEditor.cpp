@@ -32,7 +32,7 @@ void CodeEditor::highlightCurrentline(){
 
     QTextEdit::ExtraSelection selection;
 
-    selection.format.setBackground(QColor(232, 232, 232));
+    selection.format.setBackground(QColor(128,128,128,45));
     selection.format.setProperty(QTextFormat::FullWidthSelection, true);
     selection.cursor = textCursor();
     selection.cursor.clearSelection();
@@ -86,7 +86,18 @@ void CodeEditor::resizeEvent(QResizeEvent *event)
 void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
 {
     QPainter painter(lineNumberArea);
-    painter.fillRect(event->rect(), Qt::lightGray);
+    QColor editorBackground=palette().color(QPalette::Base);
+    QColor gutterBackground;
+    QColor gutterText;
+    if(editorBackground.lightness()<120){
+        gutterText=QColor(150,150,150);
+        gutterBackground=QColor(37,37,38);
+    }
+    else{
+        gutterText=QColor(90,90,90);
+        gutterBackground=QColor(240,240,240);
+    }
+    painter.fillRect(event->rect(),gutterBackground);
 
     QTextBlock block = firstVisibleBlock();
     int blockNumber = block.blockNumber();
@@ -96,8 +107,8 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
     while (block.isValid() && top <= event->rect().bottom()){
         if (block.isVisible() && bottom >= event->rect().top()){
             QString number = QString::number(blockNumber + 1);
-            painter.setPen(Qt::darkGray);
-            painter.drawText(0, top, lineNumberArea->width(), fontMetrics().height(), Qt::AlignRight, number);
+            painter.setPen(gutterText);
+            painter.drawText(0, top, lineNumberArea->width()-4, fontMetrics().height(), Qt::AlignRight, number);
         }
         block = block.next();
         top = bottom;
