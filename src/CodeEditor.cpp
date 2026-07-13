@@ -36,6 +36,7 @@ void CodeEditor::highlightCurrentline(){
     selection.cursor.clearSelection();
     selections.append(selection);
 
+    matchBracket(selections); //调用括号匹配算法
     setExtraSelections(selections);
 }
 
@@ -134,4 +135,92 @@ void CodeEditor::keyPressEvent(QKeyEvent *e)
 
     // 2. 如果是其他按键，正常处理
     QPlainTextEdit::keyPressEvent(e);
+}
+
+// 括号匹配算法实现
+void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
+{
+    QTextCursor cursor = textCursor();
+    int pos = cursor.position();
+    QTextDocument *doc = document();
+    if (pos == 0) 
+        return;
+
+    // 获取光标左边和右边的字符
+    QChar leftChar = doc->characterAt(pos - 1);
+    QChar rightChar = doc->characterAt(pos);
+
+    // 定义需要匹配的括号对
+    QString leftBrackets = "({[";
+    QString rightBrackets = ")}]";
+
+    int matchPos = -1;
+    int bracketPos = -1;
+
+    // 1. 如果光标左侧或右侧是 左括号 '(' '{' '['
+    if (leftBrackets.contains(rightChar) || leftBrackets.contains(leftChar)){
+        // 确定到底是哪一边匹配到了左括号
+        bracketPos = leftBrackets.contains(rightChar) ? pos : pos - 1;
+        QChar left = doc->characterAt(bracketPos);
+        QChar right = rightBrackets.at(leftBrackets.indexOf(left));
+        int count = 1;
+        // 往后找对应的右括号
+        for (int i = bracketPos + 1; i < doc->characterCount(); ++i){
+            QChar c = doc->characterAt(i);
+            if (c == left) 
+                count++;
+            else if (c == right) 
+                count--;
+            if (count == 0){
+                matchPos = i;
+                break;
+            }
+        }
+    } 
+    // 2. 如果光标左侧或右侧是 右括号 ')' '}' ']'
+    else if (rightBrackets.contains(leftChar) || rightBrackets.contains(rightChar)){
+        // 确定到底是哪一边匹配到了右括号
+        bracketPos = rightBrackets.contains(leftChar) ? pos - 1 : pos;
+        QChar right = doc->characterAt(bracketPos);
+        QChar left = leftBrackets.at(rightBrackets.indexOf(right));
+        int count = 1;
+        // 往前找对应的左括号
+        for (int i = bracketPos - 1; i >= 0; --i){
+            QChar c = doc->characterAt(i);
+            if (c == right) 
+                count++;
+            else if (c == left) 
+                count--;
+            if (count == 0){
+                matchPos = i;
+                break;
+            }
+        }
+    }
+
+    // 3. 如果找到了配对的括号，给它们上色
+    if (matchPos != -1){
+        QTextCharFormat format;
+        format.setBackground(QColor(0, 0, 0, 50));
+        // format.setForeground(Qt::red); 
+
+        QTextEdit::ExtraSelection sel1, sel2;
+        sel1.format = format;
+        sel2.format = format;
+
+        // 选中第一个括号
+        QTextCursor c1 = textCursor();
+        c1.setPosition(bracketPos);
+        c1.setPosition(bracketPos + 1, QTextCursor::KeepAnchor);
+        sel1.cursor = c1;
+
+        // 选中配对的第二个括号
+        QTextCursor c2 = textCursor();
+        c2.setPosition(matchPos);
+        c2.setPosition(matchPos + 1, QTextCursor::KeepAnchor);
+        sel2.cursor = c2;
+
+        selections.append(sel1);
+        selections.append(sel2);
+    }
 }

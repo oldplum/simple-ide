@@ -23,6 +23,8 @@ protected:
 
 private:
     QWidget *lineNumberArea; //行号栏控制指针
+    void matchBracket(QList<QTextEdit::ExtraSelection> &selections);
+
 };
 
 // 行号区域控件，转发绘制事件给 CodeEditor
