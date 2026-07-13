@@ -6,8 +6,7 @@
 #include <QDebug>
 #include "Highlighter.h"
 
-Highlighter::Highlighter(QTextDocument *parent, const QString &extension)
-    : QSyntaxHighlighter(parent)
+Highlighter::Highlighter(QTextDocument *parent, const QString &extension): QSyntaxHighlighter(parent)
 {
     loadRulesFromFile(extension);
 }
@@ -17,9 +16,12 @@ void Highlighter::loadRulesFromFile(const QString &ext)
     // 1. 将后缀名映射为对应的 JSON 文件名
     QString fileName;
     QString lowerExt = ext.toLower();
-    if (lowerExt == "json") fileName = "json.json";
-    else if (lowerExt == "py") fileName = "python.json";
-    else if (lowerExt == "cpp" || lowerExt == "c" || lowerExt == "h" || lowerExt == "cc" || lowerExt == "hpp") fileName = "cpp.json";
+    if (lowerExt == "json") 
+        fileName = "json.json";
+    else if (lowerExt == "py") 
+        fileName = "python.json";
+    else if (lowerExt == "cpp" || lowerExt == "c" || lowerExt == "h" || lowerExt == "cc" || lowerExt == "hpp") 
+        fileName = "cpp.json";
     else return; // 其他不支持的格式不加载高亮
 
     // 2. 智能搜寻配置文件的路径（兼容开发环境和未来打包环境）
@@ -32,15 +34,15 @@ void Highlighter::loadRulesFromFile(const QString &ext)
 
     QFile file;
     bool fileFound = false;
-    for (const QString &path : searchPaths) {
+    for (const QString &path: searchPaths){
         file.setFileName(path);
-        if (file.exists()) {
+        if (file.exists()){
             fileFound = true;
             break;
         }
     }
 
-    if (!fileFound || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    if (!fileFound || !file.open(QIODevice::ReadOnly | QIODevice::Text)){
         qDebug() << "无法找到或打开高亮配置文件:" << fileName;
         return; // 找不到规则文件，则不进行高亮
     }
@@ -49,47 +51,42 @@ void Highlighter::loadRulesFromFile(const QString &ext)
     file.close();
 
     QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (!doc.isObject()) return;
+    if (!doc.isObject()) 
+        return;
     QJsonObject root = doc.object();
 
     // 3. 解析单行规则 (关键字、数字、普通字符串等)
-    if (root.contains("singleLineRules")) {
+    if (root.contains("singleLineRules")){
         QJsonArray rulesArray = root["singleLineRules"].toArray();
-        for (const QJsonValue &val : rulesArray) {
+        for (const QJsonValue &val : rulesArray){
             QJsonObject ruleObj = val.toObject();
             HighlightRule rule;
             rule.pattern = QRegularExpression(ruleObj["pattern"].toString());
             
             QJsonObject formatObj = ruleObj["format"].toObject();
-            if (formatObj.contains("foreground")) {
+            if (formatObj.contains("foreground"))
                 rule.format.setForeground(QColor(formatObj["foreground"].toString()));
-            }
-            if (formatObj.contains("fontWeight") && formatObj["fontWeight"].toString() == "bold") {
+            if (formatObj.contains("fontWeight") && formatObj["fontWeight"].toString() == "bold") 
                 rule.format.setFontWeight(QFont::Bold);
-            }
-            if (formatObj.contains("fontItalic") && formatObj["fontItalic"].toBool()) {
+            if (formatObj.contains("fontItalic") && formatObj["fontItalic"].toBool())
                 rule.format.setFontItalic(true);
-            }
             m_rules.append(rule);
         }
     }
 
     // 4. 解析多行块规则 (如多行注释、Python三引号等)
-    if (root.contains("multiLineComment")) {
+    if (root.contains("multiLineComment")){
         QJsonObject multiObj = root["multiLineComment"].toObject();
         commentStartExpression = QRegularExpression(multiObj["startPattern"].toString());
         commentEndExpression = QRegularExpression(multiObj["endPattern"].toString());
 
         QJsonObject formatObj = multiObj["format"].toObject();
-        if (formatObj.contains("foreground")) {
+        if (formatObj.contains("foreground"))
             multiLineCommentFormat.setForeground(QColor(formatObj["foreground"].toString()));
-        }
-        if (formatObj.contains("fontWeight") && formatObj["fontWeight"].toString() == "bold") {
+        if (formatObj.contains("fontWeight") && formatObj["fontWeight"].toString() == "bold")
             multiLineCommentFormat.setFontWeight(QFont::Bold);
-        }
-        if (formatObj.contains("fontItalic") && formatObj["fontItalic"].toBool()) {
+        if (formatObj.contains("fontItalic") && formatObj["fontItalic"].toBool())
             multiLineCommentFormat.setFontItalic(true);
-        }
     }
 }
 
@@ -113,18 +110,18 @@ void Highlighter::highlightBlock(const QString &text)
     bool continuingFromPrevious = (previousBlockState() == 1);
 
     // 如果上一行不是多行注释状态，那就从本行开头找开始符
-    if (!continuingFromPrevious) {
+    if (!continuingFromPrevious){
         QRegularExpressionMatch startMatch = commentStartExpression.match(text);
         startIndex = startMatch.hasMatch() ? startMatch.capturedStart() : -1;
     }
 
-    while (startIndex >= 0) {
+    while (startIndex >= 0){
         // 如果是延续上一行的多行注释，从当前位置开始找结束符
         // 否则跳过开始符的长度，避免 Python """ 把同一个位置当成结束
         int endSearchStart;
-        if (continuingFromPrevious) {
+        if (continuingFromPrevious)
             endSearchStart = startIndex;
-        } else {
+        else{
             QRegularExpressionMatch sm = commentStartExpression.match(text, startIndex);
             endSearchStart = startIndex + sm.capturedLength();
         }
@@ -132,14 +129,14 @@ void Highlighter::highlightBlock(const QString &text)
         QRegularExpressionMatch endMatch = commentEndExpression.match(text, endSearchStart);
         int endIndex = endMatch.hasMatch() ? endMatch.capturedStart() : -1;
         int commentLength;
-        if (endIndex == -1) {
+        if (endIndex == -1){
             // 本行没有找到结束符，注释延续到行尾，通知下一行继续
             setCurrentBlockState(1);
             commentLength = text.length() - startIndex;
-        } else {
+        } 
+        else
             // 找到了结束符，计算这一段的长度
             commentLength = endIndex - startIndex + endMatch.capturedLength();
-        }
         setFormat(startIndex, commentLength, multiLineCommentFormat);
 
         // 继续在当前行剩下的地方找有没有下一个开始符

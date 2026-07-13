@@ -2,6 +2,7 @@
 #include "ui_MainWindow.h"
 #include "CodeEditor.h"
 #include "Highlighter.h"
+#include "FindReplaceDialog.h"
 #include <QCloseEvent>
 #include <QAction>
 #include <QKeySequence>
@@ -60,7 +61,7 @@ MainWindow::MainWindow(QWidget *parent)
             editor->copy();
         }
     });
-    QAction *pasteAction=editMenu->addAction(tr("复制(&V)"));
+    QAction *pasteAction=editMenu->addAction(tr("粘贴(&V)"));
     pasteAction->setShortcut(QKeySequence::Paste);
     connect(pasteAction,&QAction::triggered,this,[this](){
        CodeEditor *editor=currentEditor();
@@ -78,6 +79,35 @@ MainWindow::MainWindow(QWidget *parent)
            editor->selectAll();
        }
     });
+
+    editMenu->addSeparator();
+    QAction *findAction = editMenu->addAction(tr("查找与替换(&F)"));
+    findAction->setShortcut(QKeySequence::Find);
+    connect(findAction, &QAction::triggered, this, [this](){
+        CodeEditor *editor = currentEditor();
+        if (editor != nullptr) {
+            FindReplaceDialog *dialog = new FindReplaceDialog(this);
+            dialog->setAttribute(Qt::WA_DeleteOnClose);
+            
+            connect(dialog, &FindReplaceDialog::findNext, this, [this](const QString &text, bool caseSensitive, bool wholeWord, bool useRegex, bool backward){
+                CodeEditor *curr = currentEditor();
+                if (curr) curr->findNext(text, caseSensitive, wholeWord, useRegex, backward);
+            });
+            connect(dialog, &FindReplaceDialog::replace, this, [this](const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex){
+                CodeEditor *curr = currentEditor();
+                if (curr) curr->replace(text, replaceText, caseSensitive, wholeWord, useRegex);
+            });
+            connect(dialog, &FindReplaceDialog::replaceAll, this, [this](const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex){
+                CodeEditor *curr = currentEditor();
+                if (curr) curr->replaceAll(text, replaceText, caseSensitive, wholeWord, useRegex);
+            });
+            
+            dialog->show();
+            dialog->raise();
+            dialog->activateWindow();
+        }
+    });
+
     QAction *newAction = fileMenu->addAction(tr("新建(&N)"));
     newAction->setShortcut(QKeySequence::New);
     connect(newAction,
