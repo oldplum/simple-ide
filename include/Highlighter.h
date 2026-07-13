@@ -11,7 +11,7 @@ class Highlighter: public QSyntaxHighlighter
     Q_OBJECT
 
 public:
-    explicit Highlighter(QTextDocument *parent = nullptr);
+    explicit Highlighter(QTextDocument *parent = nullptr, const QString &extension = QString());
 
 protected:
     void highlightBlock(const QString &text) override;
@@ -21,7 +21,14 @@ private:
         QRegularExpression pattern;
         QTextCharFormat format;
     };
+    void loadRulesFromFile(const QString &ext); // 从外部 JSON 文件加载规则的方法
     QVector<HighlightRule> m_rules;
+
+    QTextCharFormat multiLineCommentFormat;
+
+    QRegularExpression commentStartExpression;
+    QRegularExpression commentEndExpression;
+
 };
 
 #endif //HIGHLIGHTER_H

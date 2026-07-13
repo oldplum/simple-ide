@@ -1,0 +1,35 @@
+{
+  "_comment": "JSON 语法高亮规则配置文件",
+  "singleLineRules": [
+    {
+      "_comment": "1. 所有的字符串值 (包含双引号内的内容 -> 深红色)",
+      "pattern": "\"(?:[^\"\\\\]|\\\\.)*\"",
+      "format": {
+        "foreground": "#B40000"
+      }
+    },
+    {
+      "_comment": "2. JSON 键名 (带有冒号前缀的字符串 -> 卡布应援色加粗覆盖)",
+      "pattern": "\"(?:[^\"\\\\]|\\\\.)*\"\\s*(?=:)",
+      "format": {
+        "foreground": "#224294",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "_comment": "3. 布尔值和 null (蓝色加粗)",
+      "pattern": "\\b(true|false|null)\\b",
+      "format": {
+        "foreground": "#0000FF",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "_comment": "4. 数字 (紫色)",
+      "pattern": "\\b-?[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\\b",
+      "format": {
+        "foreground": "#800080"
+      }
+    }
+  ]
+}

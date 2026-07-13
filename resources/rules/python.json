@@ -1,0 +1,59 @@
+{
+  "_comment": "Python 语法高亮规则配置文件",
+  "singleLineRules": [
+    {
+      "_comment": "1. Python 关键字 (深蓝色加粗)",
+      "pattern": "\\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield)\\b",
+      "format": {
+        "foreground": "#224294",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "_comment": "2. 内置类型 (深青色加粗)",
+      "pattern": "\\b(int|float|str|list|dict|set|tuple|bool|bytes)\\b",
+      "format": {
+        "foreground": "#008080",
+        "fontWeight": "bold"
+      }
+    },
+    {
+      "_comment": "3. 数字字面量 (纯蓝色)",
+      "pattern": "\\b[0-9]+(?:\\.[0-9]+)?\\b",
+      "format": {
+        "foreground": "#0000FF"
+      }
+    },
+    {
+      "_comment": "4. 双引号字符串 (深红色，严格处理转义并排除三引号)",
+      "pattern": "(?<!\")\"(?!\"\")(?:[^\"\\\\]|\\\\.)*\"",
+      "format": {
+        "foreground": "#B40000"
+      }
+    },
+    {
+      "_comment": "5. 单引号字符串 (深红色，严格处理转义并排除三引号)",
+      "pattern": "(?<!')'(?!'')(?:[^'\\\\]|\\\\.)*'",
+      "format": {
+        "foreground": "#B40000"
+      }
+    },
+    {
+      "_comment": "6. 单行注释 (灰色斜体)",
+      "pattern": "#[^\\n]*",
+      "format": {
+        "foreground": "#808080",
+        "fontItalic": true
+      }
+    }
+  ],
+  "multiLineComment": {
+    "_comment": "7. 多行三引号字符串 (当成注释块渲染成深红色)",
+    "startPattern": "\"\"\"",
+    "endPattern": "\"\"\"",
+    "format": {
+      "foreground": "#B40000",
+      "fontItalic": false
+    }
+  }
+}

@@ -1,6 +1,8 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 #include "CodeEditor.h"
+#include "Highlighter.h"
+#include "FindReplaceDialog.h"
 #include <QCloseEvent>
 #include <QAction>
 #include <QKeySequence>
@@ -85,6 +87,35 @@ MainWindow::MainWindow(QWidget *parent)
            editor->selectAll();
        }
     });
+
+    editMenu->addSeparator();
+    QAction *findAction = editMenu->addAction(tr("查找与替换(&F)"));
+    findAction->setShortcut(QKeySequence::Find);
+    connect(findAction, &QAction::triggered, this, [this](){
+        CodeEditor *editor = currentEditor();
+        if (editor != nullptr) {
+            FindReplaceDialog *dialog = new FindReplaceDialog(this);
+            dialog->setAttribute(Qt::WA_DeleteOnClose);
+            
+            connect(dialog, &FindReplaceDialog::findNext, this, [this](const QString &text, bool caseSensitive, bool wholeWord, bool useRegex, bool backward){
+                CodeEditor *curr = currentEditor();
+                if (curr) curr->findNext(text, caseSensitive, wholeWord, useRegex, backward);
+            });
+            connect(dialog, &FindReplaceDialog::replace, this, [this](const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex){
+                CodeEditor *curr = currentEditor();
+                if (curr) curr->replace(text, replaceText, caseSensitive, wholeWord, useRegex);
+            });
+            connect(dialog, &FindReplaceDialog::replaceAll, this, [this](const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex){
+                CodeEditor *curr = currentEditor();
+                if (curr) curr->replaceAll(text, replaceText, caseSensitive, wholeWord, useRegex);
+            });
+            
+            dialog->show();
+            dialog->raise();
+            dialog->activateWindow();
+        }
+    });
+
     QAction *newAction = fileMenu->addAction(tr("新建(&N)"));
     newAction->setShortcut(QKeySequence::New);
     connect(newAction,
@@ -148,11 +179,12 @@ CodeEditor *MainWindow::currentEditor() const
 }
 void MainWindow::newFile()
 {
-    CodeEditor *editor=new CodeEditor(ui->tabWidget);
+    CodeEditor *editor = new CodeEditor(ui->tabWidget);
     connect(editor,
-                &QPlainTextEdit::cursorPositionChanged,
-                this,
-                &MainWindow::updateCursorPosition);
+            &QPlainTextEdit::cursorPositionChanged,
+            this,
+            &MainWindow::updateCursorPosition);
+    new Highlighter(editor->document());
     connect(editor->document(),
             &QTextDocument::modificationChanged,
             this,
@@ -171,7 +203,7 @@ void MainWindow::newFile()
     editor->document()->setModified(false);
     QString name = tr("未命名%1").arg(untitledCount);
     ++untitledCount;
-    int index=ui->tabWidget->addTab(editor,name);
+    int index = ui->tabWidget->addTab(editor, name);
     ui->tabWidget->setCurrentIndex(index);
     editor->setProperty("baseName",name);
 }
@@ -303,6 +335,9 @@ void MainWindow::openFile()
             &QPlainTextEdit::cursorPositionChanged,
             this,
             &MainWindow::updateCursorPosition);
+    QString ext = QFileInfo(filePath).suffix();
+    new Highlighter(editor->document(), ext);
+
     editor->setPlainText(content);
     editor->setProperty("filePath",filePath);
     editor->document()->setModified(false);
@@ -357,14 +392,15 @@ void MainWindow::saveFileAs()
 void MainWindow::updateCursorPosition()
 {
     CodeEditor *editor=currentEditor();
-    if(editor==nullptr){
+    if(editor==nullptr)
+    {
         statusBar()->showMessage(tr("就绪"));
         return;
     }
-    QTextCursor cursor=editor->textCursor();
-    int line =cursor.blockNumber()+1;
+    QTextCursor cursor = editor->textCursor();
+    int line=cursor.blockNumber()+1;
     int column=cursor.positionInBlock()+1;
     statusBar()->showMessage(
-        tr("第%1行，第%2列").arg(line).arg(column)
-        );
+                tr("第%1行，第%2列").arg(line).arg(column)
+                );
 }

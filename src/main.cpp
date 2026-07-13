@@ -1,5 +1,4 @@
 #include <QApplication>
-//#include "CodeEditor.h"
 #include "MainWindow.h"
 
 int main(int argc, char *argv[])
@@ -7,7 +6,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
 
     MainWindow window;
-    window.setWindowTitle("CodeEditor Test");
+    window.setWindowTitle("Simple IDE");
     window.resize(800, 600);
     window.show();
 
