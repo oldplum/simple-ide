@@ -90,6 +90,7 @@ void MainWindow::openFile()
     QString content=stream.readAll();
     file.close();
     CodeEditor *editor=new CodeEditor(ui->tabWidget);
+    new Highlighter(editor->document());  // 给新打开的文件绑定语法高亮
     editor->setPlainText(content);
     editor->setProperty("filePath",filePath);
     editor->document()->setModified(false);
