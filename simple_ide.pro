@@ -8,8 +8,10 @@ CONFIG += c++17
 INCLUDEPATH += include 
 
 HEADERS += \
-    include/CodeEditor.h
+    include/CodeEditor.h \
+    include/Highlighter.h
 
 SOURCES += \
     src/main.cpp \
-    src/CodeEditor.cpp
+    src/CodeEditor.cpp \
+    src/Highlighter.cpp
