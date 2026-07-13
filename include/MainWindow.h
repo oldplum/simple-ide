@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+class   CodeEditor;
+class   QCloseEvent;
 namespace Ui{
     class MainWindow;
 }
@@ -15,14 +17,21 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+protected:
+    void closeEvent(QCloseEvent *event) override;
+
 private:
     Ui::MainWindow *ui;
     int untitledCount=1;
+    CodeEditor *currentEditor() const;
+    bool maybeSave(int index);
 
 private slots:
     void newFile();
     void openFile();
     void closeTab(int index);
+    void saveFile();
+    void saveFileAs();
 
 signals:
 
