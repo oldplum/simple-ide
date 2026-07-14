@@ -539,6 +539,8 @@ bool MainWindow::openFileFromPath(const QString &filePath)
     file.close();
     CodeEditor *editor=new CodeEditor(ui->tabWidget);
     connect(editor,&QPlainTextEdit::cursorPositionChanged,this,&MainWindow::updateCursorPosition);
+    connect(editor, &CodeEditor::bracketMatched, m_catWidget, &CatWidget::onBracketMatched);
+    connect(editor, &CodeEditor::codeDeleted, m_catWidget, &CatWidget::onCodeDeleted);
     QString extension=QFileInfo(filePath).suffix();
     new Highlighter(editor->document(),extension);
     editor->setPlainText(content);
