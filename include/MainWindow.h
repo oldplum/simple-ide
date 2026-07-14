@@ -27,6 +27,7 @@ private:
     CodeEditor *currentEditor() const;
     bool maybeSave(int index);
     CatWidget *m_catWidget;
+    bool openFileFromPath(const QString &filePath);
 
 private slots:
     void newFile();
