@@ -6,7 +6,8 @@
 #include <QMessageBox>
 #include <QRegularExpression>
 
-CodeEditor::CodeEditor(QWidget *parent): QPlainTextEdit(parent)
+// 构造函数，初始化行号栏、高亮连接等
+CodeEditor::CodeEditor(QWidget *parent): QPlainTextEdit(parent)  
 {
     // 创建行号区域
     lineNumberArea = new LineNumberArea(this);
@@ -31,6 +32,7 @@ CodeEditor::CodeEditor(QWidget *parent): QPlainTextEdit(parent)
 
 }
 
+// 当前光标所在行的高亮逻辑（包含整行浅灰背景以及调用matchBracket）
 void CodeEditor::highlightCurrentline(){
     QList<QTextEdit::ExtraSelection> selections;
 
@@ -46,7 +48,7 @@ void CodeEditor::highlightCurrentline(){
     setExtraSelections(selections);
 }
 
-// 根据最大行号的位数计算行号栏宽度（加上了折叠区 15 像素的空间）
+// 计算行号栏需要占用的物理宽度（像素），随最大行数变化
 int CodeEditor::LineNumberAreaWidth()
 {
     int digits = 1;
@@ -59,13 +61,13 @@ int CodeEditor::LineNumberAreaWidth()
     return space;
 }
 
-// 设置编辑区左边距，为行号栏腾出空间
+// 槽函数：当文档的总行数（BlockCount）发生变化时，重新分配左侧行号栏的宽度
 void CodeEditor::updateLineNumberAreaWidth(int /* newBlockCount */)
 {
     setViewportMargins(LineNumberAreaWidth(), 0, 0, 0);
 }
 
-// 滚动时同步更新行号栏
+// 槽函数：当编辑器滚动时（发生垂直偏移 dy），同步滚动和刷新左侧行号栏的绘制区域
 void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
 {
     if (dy){
@@ -78,7 +80,7 @@ void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
     }
 }
 
-// 窗口大小变化时，调整行号栏的几何尺寸
+// 重写：窗口大小改变时，调整内部行号栏区域(lineNumberArea)的几何尺寸 (setGeometry)
 void CodeEditor::resizeEvent(QResizeEvent *event)
 {
     QPlainTextEdit::resizeEvent(event);
@@ -86,8 +88,7 @@ void CodeEditor::resizeEvent(QResizeEvent *event)
     lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), LineNumberAreaWidth(), cr.height()));
 }
 
-// 绘制行号与折叠按钮
-// 绘制行号与折叠按钮 (解决折叠行号不收缩的对齐问题)
+// 绘制行号栏的具体逻辑（包括背景色和行号数字）
 void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
 {
     QPainter painter(lineNumberArea);
@@ -150,7 +151,7 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
 }
 
 
-//实现回车时自动缩进
+// 重写：拦截键盘输入事件。如果是回车键，则读取上一行的前置空格实现自动缩进；如果是退格键，发射 codeDeleted 信号
 void CodeEditor::keyPressEvent(QKeyEvent *e)
 {
     if (e->key() == Qt::Key_Backspace || e->key() == Qt::Key_Delete)
@@ -186,7 +187,7 @@ void CodeEditor::keyPressEvent(QKeyEvent *e)
     QPlainTextEdit::keyPressEvent(e);
 }
 
-// 括号匹配算法实现
+// 核心算法：通过栈思想（遇到匹配+1，反向-1）向前或向后搜索匹配的括号对，并将其加入高亮选择区
 void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
 {
     QTextCursor cursor = textCursor();
@@ -277,7 +278,7 @@ void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
     }
 }
 
-// 1. 查找下一个/上一个
+// 查找下一个/上一个，根据传入的标志组装查找参数
 void CodeEditor::findNext(const QString &text, bool caseSensitive, bool wholeWord, bool useRegex, bool backward)
 {
     QTextDocument::FindFlags flags;
@@ -299,7 +300,7 @@ void CodeEditor::findNext(const QString &text, bool caseSensitive, bool wholeWor
     else
         found = find(text, flags);
 
-    // 体验优化：如果查到末尾没找到，我们回绕（Wrap-around）从头/尾继续找
+    // 如果查到末尾没找到，我们回绕（Wrap-around）从头/尾继续找
     if (!found){
         QTextCursor cursor = textCursor();
         int savedPos = cursor.position();
@@ -328,7 +329,7 @@ void CodeEditor::findNext(const QString &text, bool caseSensitive, bool wholeWor
     }
 }
 
-// 2. 替换当前选中项（并自动跳到下一个）
+// 替换当前选中的匹配文本，并查找下一个
 void CodeEditor::replace(const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex)
 {
     QTextCursor cursor = textCursor();
@@ -370,7 +371,7 @@ void CodeEditor::replace(const QString &text, const QString &replaceText, bool c
     findNext(text, caseSensitive, wholeWord, useRegex, false);
 }
 
-// 3. 全部替换
+// 遍历全文，替换所有匹配到的文本
 void CodeEditor::replaceAll(const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex)
 {
     QTextCursor originalCursor = textCursor();
@@ -410,8 +411,7 @@ void CodeEditor::replaceAll(const QString &text, const QString &replaceText, boo
     QMessageBox::information(this, tr("全部替换"), tr("替换完成！共替换了 %1 处。").arg(count));
 }
 
-
-// 计算嵌套层级与折叠起点
+// 槽函数：重新计算整个文档中花括号 `{}` 的嵌套层级，用于代码折叠功能
 void CodeEditor::recalculateFolding()
 {
     QTextBlock block = document()->begin();
@@ -458,7 +458,7 @@ void CodeEditor::recalculateFolding()
     }
 }
 
-// 展开/收起折叠块
+// 执行折叠或展开动作的核心函数，根据当前块的折叠状态（FoldingUserData），隐藏或显示其子级代码块
 void CodeEditor::toggleFold(QTextBlock &startBlock)
 {
     FoldingUserData *startData = dynamic_cast<FoldingUserData*>(startBlock.userData());
@@ -469,7 +469,7 @@ void CodeEditor::toggleFold(QTextBlock &startBlock)
     updateFoldedBlocksVisibility();
 }
 
-// 动态计算每一行的可见性并刷新布局
+// 遍历所有文本块（QTextBlock），根据它们的 m_isFolded 属性，动态刷新它们在编辑器中的可见性（setVisible）
 void CodeEditor::updateFoldedBlocksVisibility()
 {
     QTextBlock block = document()->begin();
@@ -501,7 +501,7 @@ void CodeEditor::updateFoldedBlocksVisibility()
     lineNumberArea->update();
 }
 
-// 拦截行号栏点击事件，判断是否点击了折叠指示器
+// 处理在行号栏区域点击鼠标的事件（例如点击折叠代码块）
 void CodeEditor::lineNumberAreaMousePressEvent(QMouseEvent *event)
 {
     // 如果点击的是行号栏最右侧 15px 以内的折叠按钮区

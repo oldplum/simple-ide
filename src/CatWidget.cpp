@@ -6,6 +6,7 @@
 #include <QPushButton>
 #include <QImageReader>
 
+// 构造函数，初始化 UI 控件（标签、按钮）并启动饥饿倒计时
 CatWidget::CatWidget(QWidget *parent): QWidget(parent), m_currentMovie(nullptr), m_currentState(Default), m_hungerLevel(0)
 {
     // 设置猫咪窗口大小和悬浮属性
@@ -42,6 +43,7 @@ CatWidget::CatWidget(QWidget *parent): QWidget(parent), m_currentMovie(nullptr),
     setState(Default);
 }
 
+// 统一的状态切换入口：负责停止旧动画，加载新动画，防止内存泄漏和状态冲突
 void CatWidget::setState(CatState state)
 {
     m_currentState = state;
@@ -98,20 +100,25 @@ void CatWidget::setState(CatState state)
         m_statusLabel->hide();
 }
 
+// 匹配括号 -> 切换为开心状态（Happy）
 void CatWidget::onBracketMatched()
 {
-    if (m_currentState == Hungry) return; // 饿的时候不开心
+    if (m_currentState == Hungry) 
+        return; // 饿的时候不开心
     setState(Happy);
     m_moodTimer->start(3000); // 开心3秒
 }
 
+// 狂删代码 -> 切换为生气状态（Angry）
 void CatWidget::onCodeDeleted()
 {
-    if (m_currentState == Hungry) return; // 饿的时候没力气生气
+    if (m_currentState == Hungry) 
+        return; // 饿的时候没力气生气
     setState(Angry);
     m_moodTimer->start(3000); // 生气3秒
 }
 
+// 用户主动投喂 -> 重置饥饿度，满血复活并强制开心
 void CatWidget::feed()
 {
     m_hungerLevel = 0;
@@ -119,16 +126,18 @@ void CatWidget::feed()
     m_moodTimer->start(4000);
 }
 
+// 饥饿定时器超时触发：暗中增加饥饿度，若到达阈值则锁死为 Hungry 状态
 void CatWidget::updateHunger()
 {
-    if (m_currentState == Hungry) return;
+    if (m_currentState == Hungry) 
+        return;
     
     m_hungerLevel++;
-    if (m_hungerLevel >= 3) { // 测试用：累积3次就饿了
+    if (m_hungerLevel >= 3) // 测试用：累积3次就饿了
         setState(Hungry);
-    }
 }
 
+// 情绪定时器超时触发：情绪平复，自动从喜/怒重置回 Default（默认）状态
 void CatWidget::resetToDefault()
 {
     if (m_hungerLevel >= 3)

@@ -7,6 +7,7 @@
 #include <QVBoxLayout>
 #include <QGridLayout>
 
+// 构造函数，负责使用纯代码进行 UI 控件的实例化和网格布局
 FindReplaceDialog::FindReplaceDialog(QWidget *parent): QDialog(parent)
 {
     setWindowTitle(tr("查找/替换"));
@@ -75,6 +76,7 @@ FindReplaceDialog::FindReplaceDialog(QWidget *parent): QDialog(parent)
     connect(m_cancelButton, &QPushButton::clicked, this, &QDialog::reject); // reject() 会隐藏对话框
 }
 
+// 槽函数：根据输入框是否有字，动态禁用/启用右侧功能按钮（防止无字查找引发崩溃）
 void FindReplaceDialog::enableButtons(const QString &text)
 {
     bool hasText = !text.isEmpty();
@@ -84,6 +86,7 @@ void FindReplaceDialog::enableButtons(const QString &text)
     m_replaceAllButton->setEnabled(hasText);
 }
 
+// 响应“查找下一个”按钮点击，读取复选框状态并发出 findNext 信号 (backward=false)
 void FindReplaceDialog::onFindNextClicked()
 {
     emit findNext(m_findLineEdit->text(),
@@ -93,6 +96,7 @@ void FindReplaceDialog::onFindNextClicked()
                   false); // backward = false 向下查找
 }
 
+// 响应“查找上一个”按钮点击，读取复选框状态并发出 findNext 信号 (backward=true)
 void FindReplaceDialog::onFindPrevClicked()
 {
     emit findNext(m_findLineEdit->text(),
@@ -102,6 +106,7 @@ void FindReplaceDialog::onFindPrevClicked()
                   true); // backward = true 向上查找
 }
 
+// 响应“替换”按钮点击，读取复选框状态并发出 replace 信号
 void FindReplaceDialog::onReplaceClicked()
 {
     emit replace(m_findLineEdit->text(),
@@ -111,6 +116,7 @@ void FindReplaceDialog::onReplaceClicked()
                  m_regexCheckBox->isChecked());
 }
 
+// 响应“全部替换”按钮点击，读取复选框状态并发出 replaceAll 信号
 void FindReplaceDialog::onReplaceAllClicked()
 {
     emit replaceAll(m_findLineEdit->text(),
