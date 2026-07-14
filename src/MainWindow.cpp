@@ -275,6 +275,8 @@ MainWindow::MainWindow(QWidget *parent)
     
     // 用 QDockWidget 将猫咪挂在主界面右侧
     QDockWidget *dock = new QDockWidget(tr("代码伴侣"), this);
+    dock->setObjectName("catDock");
+    dock->setFeatures(QDockWidget::DockWidgetMovable|QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetClosable);
     dock->setWidget(m_catWidget);
     dock->setAllowedAreas(Qt::RightDockWidgetArea | Qt::LeftDockWidgetArea);
     // 固定宽度防止太宽
@@ -291,6 +293,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     QSettings sessionSettings("SimpleIDE","SimpleIDE");
     restoreGeometry(sessionSettings.value("window/geometry").toByteArray());
+    restoreState(sessionSettings.value("window/state").toByteArray());
+    dock->show();
+    dock->raise();
     QStringList openFiles=sessionSettings.value("session/openFiles").toStringList();
     QString activeFile=sessionSettings.value("session/activeFile").toString();
     for(const QString &filePath:openFiles){
@@ -452,6 +457,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
     QSettings settings("SimpleIDE","SimpleIDE");
     settings.setValue("window/geometry",saveGeometry());
+    settings.setValue("window/state",saveState());
     settings.setValue("session/openFiles",openFiles);
     if(activeEditor!=nullptr){
         settings.setValue("session/activeFile",activeEditor->property("filePath").toString());
