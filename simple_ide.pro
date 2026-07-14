@@ -11,7 +11,7 @@ HEADERS += \
     include/CodeEditor.h \
     include/Highlighter.h \
     include/MainWindow.h \
-    include/FindReplaceDialog.h \
+    include/FindReplaceDialog.h\
     include/CatWidget.h
 
 SOURCES += \
@@ -19,7 +19,7 @@ SOURCES += \
     src/CodeEditor.cpp \
     src/Highlighter.cpp \
     src/MainWindow.cpp \
-    src/FindReplaceDialog.cpp \
+    src/FindReplaceDialog.cpp\
     src/CatWidget.cpp
 
 FORMS += \
