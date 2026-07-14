@@ -5,6 +5,7 @@
 
 class   CodeEditor;
 class   QCloseEvent;
+class   CatWidget;
 namespace Ui{
     class MainWindow;
 }
@@ -26,6 +27,7 @@ private:
     CodeEditor *currentEditor() const;
     bool maybeSave(int index);
     bool openFileFromPath(const QString &filePath);
+    CatWidget *m_catWidget=nullptr;
 
 private slots:
     void newFile();

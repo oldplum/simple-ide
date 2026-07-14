@@ -6,8 +6,7 @@
 #include <QMessageBox>
 #include <QRegularExpression>
 
-CodeEditor::CodeEditor(QWidget *parent)
-    : QPlainTextEdit(parent)
+CodeEditor::CodeEditor(QWidget *parent): QPlainTextEdit(parent)
 {
     // 创建行号区域
     lineNumberArea = new LineNumberArea(this);
@@ -25,6 +24,11 @@ CodeEditor::CodeEditor(QWidget *parent)
             this, &CodeEditor::highlightCurrentline);
     
     highlightCurrentline();
+
+    // 监听文本变化以动态重新计算折叠层级
+    connect(this, &QPlainTextEdit::textChanged, this, &CodeEditor::recalculateFolding);
+    recalculateFolding();
+
 }
 
 void CodeEditor::highlightCurrentline(){
@@ -42,7 +46,7 @@ void CodeEditor::highlightCurrentline(){
     setExtraSelections(selections);
 }
 
-// 根据最大行号的位数计算行号栏宽度
+// 根据最大行号的位数计算行号栏宽度（加上了折叠区 15 像素的空间）
 int CodeEditor::LineNumberAreaWidth()
 {
     int digits = 1;
@@ -51,7 +55,7 @@ int CodeEditor::LineNumberAreaWidth()
         maxLines /= 10;
         ++digits;
     }
-    int space = 3 + fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits;
+    int space = 3 + fontMetrics().horizontalAdvance(QLatin1Char('9')) * digits + 15;
     return space;
 }
 
@@ -82,7 +86,8 @@ void CodeEditor::resizeEvent(QResizeEvent *event)
     lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), LineNumberAreaWidth(), cr.height()));
 }
 
-// 绘制行号
+// 绘制行号与折叠按钮
+// 绘制行号与折叠按钮 (解决折叠行号不收缩的对齐问题)
 void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
 {
     QPainter painter(lineNumberArea);
@@ -101,25 +106,56 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
 
     QTextBlock block = firstVisibleBlock();
     int blockNumber = block.blockNumber();
-    int top = qRound(blockBoundingGeometry(block).translated(contentOffset()).top());
-    int bottom = top + qRound(blockBoundingRect(block).height());
 
-    while (block.isValid() && top <= event->rect().bottom()){
+    while (block.isValid()){
+        // 直接获取当前行在视口中的真实几何矩形
+        QRectF blockRect = blockBoundingGeometry(block).translated(contentOffset());
+        int top = qRound(blockRect.top());
+        int bottom = qRound(blockRect.bottom());
+
+        // 如果当前行已经超出了可见区域底部，直接结束循环
+        if (top > event->rect().bottom())
+            break;
+
+        // 只有当行真正可见，且在绘制区域内时才绘制
         if (block.isVisible() && bottom >= event->rect().top()){
             QString number = QString::number(blockNumber + 1);
             painter.setPen(gutterText);
-            painter.drawText(0, top, lineNumberArea->width()-4, fontMetrics().height(), Qt::AlignRight, number);
+            
+            // 行号文字偏左，留出右侧 15px 空间画折叠小方块
+            int widthForNumber = lineNumberArea->width() - 15;
+            painter.drawText(0, top, widthForNumber, fontMetrics().height(), Qt::AlignRight, number);
+            
+            // 绘制折叠指示器 [+] 或 [-]
+            FoldingUserData *data = dynamic_cast<FoldingUserData*>(block.userData());
+            if (data && data->isFoldStart()){
+                QRect rect(lineNumberArea->width() - 13, top + (fontMetrics().height() - 10) / 2, 10, 10);
+                painter.save();
+                painter.setPen(gutterText);
+                painter.setBrush(Qt::NoBrush);
+                painter.drawRect(rect);
+                // 绘制一条横线表示减号
+                painter.drawLine(rect.left() + 2, rect.top() + 5, rect.right() - 2, rect.top() + 5);
+                if (data->isFolded()){
+                    // 如果被折叠了，绘制一条竖线组成加号
+                    painter.drawLine(rect.left() + 5, rect.top() + 2, rect.left() + 5, rect.bottom() - 2);
+                }
+                painter.restore();
+            }
         }
+        
         block = block.next();
-        top = bottom;
-        bottom = top + qRound(blockBoundingRect(block).height());
-        ++blockNumber;
+        ++blockNumber; // 绝对行号依然正常递增
     }
 }
+
 
 //实现回车时自动缩进
 void CodeEditor::keyPressEvent(QKeyEvent *e)
 {
+    if (e->key() == Qt::Key_Backspace || e->key() == Qt::Key_Delete)
+        emit codeDeleted();
+
     // 1. 如果按下的是回车键
     if (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter){
         // 获取光标所在行的文本
@@ -235,6 +271,9 @@ void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
 
         selections.append(sel1);
         selections.append(sel2);
+
+        emit bracketMatched();
+
     }
 }
 
@@ -369,4 +408,117 @@ void CodeEditor::replaceAll(const QString &text, const QString &replaceText, boo
     // 替换完成后，将光标还原回用户之前在的位置，并弹窗汇报战果
     setTextCursor(originalCursor);
     QMessageBox::information(this, tr("全部替换"), tr("替换完成！共替换了 %1 处。").arg(count));
+}
+
+
+// 计算嵌套层级与折叠起点
+void CodeEditor::recalculateFolding()
+{
+    QTextBlock block = document()->begin();
+    int currentLevel = 0;
+
+    // 使用 QList 模拟栈，记录尚未匹配到 '}' 的折叠起点数据
+    QList<FoldingUserData*> openFolds;
+    
+    while (block.isValid()){
+        QString text = block.text();
+        bool hasOpenBrace = text.contains('{');
+        bool hasCloseBrace = text.contains('}');
+        
+        FoldingUserData *data = dynamic_cast<FoldingUserData*>(block.userData());
+        if (!data){
+            data = new FoldingUserData();
+            block.setUserData(data);
+        }
+        
+        // 一开始默认当前行不是折叠起点
+        data->setFoldStart(false); 
+        data->setFoldingLevel(currentLevel);
+
+        // 处理左括号
+        if (hasOpenBrace){
+            currentLevel++;
+            if (!hasCloseBrace)
+                openFolds.push_back(data); // 如果当前行只有 '{'，先把它推入栈中等待匹配
+        }
+
+        // 处理右括号
+        if (hasCloseBrace){
+            currentLevel = qMax(0, currentLevel - 1);
+            if (!hasOpenBrace){
+                // 如果遇到了“单身” '}'，且栈里有等待的 '{'
+                if (!openFolds.isEmpty()){
+                    // 匹配成功！把最近的一个 '{' 设置为真正的折叠起点
+                    FoldingUserData *matchedStart = openFolds.takeLast();
+                    matchedStart->setFoldStart(true);
+                }
+            }
+        }
+        block = block.next();
+    }
+}
+
+// 展开/收起折叠块
+void CodeEditor::toggleFold(QTextBlock &startBlock)
+{
+    FoldingUserData *startData = dynamic_cast<FoldingUserData*>(startBlock.userData());
+    if (!startData || !startData->isFoldStart()) 
+        return;
+    
+    startData->setFolded(!startData->isFolded());
+    updateFoldedBlocksVisibility();
+}
+
+// 动态计算每一行的可见性并刷新布局
+void CodeEditor::updateFoldedBlocksVisibility()
+{
+    QTextBlock block = document()->begin();
+    int hideLevel = -1; // -1 表示可见，否则表示隐藏该嵌套级别之下的行
+    
+    while (block.isValid()){
+        FoldingUserData *data = dynamic_cast<FoldingUserData*>(block.userData());
+        
+        if (hideLevel != -1){
+            // 如果遇到了包含 '}' 且层级刚好退回来的闭合行
+            if (data && data->foldingLevel() == hideLevel + 1 && block.text().contains('}')) {
+                block.setVisible(true); // 闭合行保持可见！
+                hideLevel = -1;        // 在这里结束隐藏状态
+            } 
+            else {
+                block.setVisible(false);
+            }
+        } 
+        else{
+            block.setVisible(true);
+            if (data && data->isFoldStart() && data->isFolded())
+                hideLevel = data->foldingLevel();
+        }
+        block = block.next();
+    }
+    
+    emit document()->documentLayout()->update();
+    viewport()->update();
+    lineNumberArea->update();
+}
+
+// 拦截行号栏点击事件，判断是否点击了折叠指示器
+void CodeEditor::lineNumberAreaMousePressEvent(QMouseEvent *event)
+{
+    // 如果点击的是行号栏最右侧 15px 以内的折叠按钮区
+    if (event->x() >= lineNumberArea->width() - 15){
+        int y = event->y();
+        QTextBlock block = firstVisibleBlock();
+        int top = qRound(blockBoundingGeometry(block).translated(contentOffset()).top());
+        int bottom = top + qRound(blockBoundingRect(block).height());
+        
+        while (block.isValid() && top <= lineNumberArea->height()){
+            if (block.isVisible() && y >= top && y <= bottom){
+                toggleFold(block);
+                break;
+            }
+            block = block.next();
+            top = bottom;
+            bottom = top + qRound(blockBoundingRect(block).height());
+        }
+    }
 }

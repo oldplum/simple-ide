@@ -3,6 +3,7 @@
 #include "CodeEditor.h"
 #include "Highlighter.h"
 #include "FindReplaceDialog.h"
+#include "CatWidget.h"
 #include <QCloseEvent>
 #include <QAction>
 #include <QKeySequence>
@@ -18,6 +19,8 @@
 #include <QApplication>
 #include <QSettings>
 #include <QStringList>
+#include <QDockWidget>
+#include <QShortcut>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -269,6 +272,47 @@ MainWindow::MainWindow(QWidget *parent)
             this,
             &MainWindow::close);
    // newFile();
+    // 初始化电子猫
+    m_catWidget = new CatWidget(this);
+
+    // 创建可停靠侧边栏
+    QDockWidget *catDock =
+            new QDockWidget(tr("代码伴侣"), this);
+
+    catDock->setObjectName("catDock");
+    catDock->setWidget(m_catWidget);
+
+    catDock->setAllowedAreas(
+        Qt::LeftDockWidgetArea |
+        Qt::RightDockWidgetArea
+    );
+
+    catDock->setMinimumWidth(150);
+    catDock->setMaximumWidth(200);
+
+    addDockWidget(
+        Qt::RightDockWidgetArea,
+        catDock
+    );
+
+    // 加入已经存在的“视图”菜单
+    viewMenu->addSeparator();
+
+    QAction *catAction = catDock->toggleViewAction();
+    catAction->setText(tr("显示电子猫"));
+    viewMenu->addAction(catAction);
+
+    // Ctrl+Shift+F 投喂
+    QShortcut *feedShortcut =
+            new QShortcut(
+                QKeySequence("Ctrl+Shift+F"),
+                this
+            );
+
+    connect(feedShortcut,
+            &QShortcut::activated,
+            m_catWidget,
+            &CatWidget::feed);
     QSettings sessionSettings("SimpleIDE","SimpleIDE");
     restoreGeometry(sessionSettings.value("window/geometry").toByteArray());
     QStringList openFiles=sessionSettings.value("session/openFiles").toStringList();
@@ -302,6 +346,24 @@ CodeEditor *MainWindow::currentEditor() const
 void MainWindow::newFile()
 {
     CodeEditor *editor = new CodeEditor(ui->tabWidget);
+    connect(editor,
+            &CodeEditor::bracketMatched,
+            m_catWidget,
+            &CatWidget::onBracketMatched);
+
+    connect(editor,
+            &CodeEditor::codeDeleted,
+            m_catWidget,
+            &CatWidget::onCodeDeleted);
+    connect(editor,
+            &CodeEditor::bracketMatched,
+            m_catWidget,
+            &CatWidget::onBracketMatched);
+
+    connect(editor,
+            &CodeEditor::codeDeleted,
+            m_catWidget,
+            &CatWidget::onCodeDeleted);
     connect(editor,
             &QPlainTextEdit::cursorPositionChanged,
             this,
