@@ -522,3 +522,37 @@ void CodeEditor::lineNumberAreaMousePressEvent(QMouseEvent *event)
         }
     }
 }
+//按ctrl+鼠标滚轮改变字体大小
+void CodeEditor::wheelEvent(QWheelEvent *event)
+{
+    if (event->modifiers().testFlag(Qt::ControlModifier)) {
+        const int delta = event->angleDelta().y();
+        QFont editorFont =font();
+        int fontSize=editorFont.pointSize();
+        if (fontSize <= 0){
+            fontSize = 11;
+        }
+        const int minFontSize = 8;
+        const int maxFontSize = 32;
+        if (delta > 0&&fontSize<maxFontSize) {
+            ++fontSize;
+        }
+        else if (delta < 0&&fontSize>minFontSize){
+            --fontSize;
+        }
+        else{
+            event->accept();
+                 return;
+    }
+        editorFont.setPointSize(fontSize);
+        setFont(editorFont);
+
+        updateLineNumberAreaWidth(0);
+        lineNumberArea->update();
+
+        event->accept();
+        return;
+    }
+
+    QPlainTextEdit::wheelEvent(event);
+}

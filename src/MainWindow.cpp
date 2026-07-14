@@ -141,6 +141,42 @@ MainWindow::MainWindow(QWidget *parent)
     {
         lightThemeAction->trigger();
     }
+    viewMenu->addSeparator();
+    QAction *zoomInAction = viewMenu->addAction(tr("放大代码"));
+    zoomInAction->setShortcut(QKeySequence::ZoomIn);
+    connect(zoomInAction, &QAction::triggered, this, [this]() {
+        CodeEditor *editor = currentEditor();
+        if (editor != nullptr) {
+            editor->zoomIn(1);
+        }
+    });
+    QAction *zoomOutAction = viewMenu->addAction(tr("缩小代码"));
+    zoomOutAction->setShortcut(QKeySequence::ZoomOut);
+    connect(zoomOutAction, &QAction::triggered, this, [this]() {
+        CodeEditor *editor = currentEditor();
+        if (editor != nullptr) {
+            editor->zoomOut(1);
+        }
+    });
+    QAction *resetZoomAction = viewMenu->addAction(tr("恢复默认大小"));
+    resetZoomAction->setShortcut(
+        QKeySequence(Qt::CTRL | Qt::Key_0)
+    );
+    connect(resetZoomAction, &QAction::triggered, this, [this]() {
+        CodeEditor *editor = currentEditor();
+        if (editor == nullptr) {
+            return;
+        }
+        int defaultSize =
+            editor->property("defaultFontPointSize").toInt();
+
+        if (defaultSize <= 0) {
+            defaultSize = 11;
+        }
+        QFont font = editor->font();
+        font.setPointSize(defaultSize);
+        editor->setFont(font);
+    });
     QAction *undoAction = editMenu->addAction(tr("撤销(&U)"));
     undoAction->setShortcut(QKeySequence::Undo);
     connect(undoAction, &QAction::triggered, this, [this]() {
@@ -327,6 +363,15 @@ CodeEditor *MainWindow::currentEditor() const
 void MainWindow::newFile()
 {
     CodeEditor *editor = new CodeEditor(ui->tabWidget);
+    int defaultSize = editor->font().pointSize();
+    if (defaultSize <= 0) {
+        defaultSize = 11;
+    }
+
+    editor->setProperty(
+        "defaultFontPointSize",
+        defaultSize
+    );
     connect(editor,
             &QPlainTextEdit::cursorPositionChanged,
             this,
@@ -544,6 +589,15 @@ bool MainWindow::openFileFromPath(const QString &filePath)
     QString content=stream.readAll();
     file.close();
     CodeEditor *editor=new CodeEditor(ui->tabWidget);
+    int defaultSize = editor->font().pointSize();
+    if (defaultSize <= 0) {
+        defaultSize = 11;
+    }
+
+    editor->setProperty(
+        "defaultFontPointSize",
+        defaultSize
+    );
     connect(editor,&QPlainTextEdit::cursorPositionChanged,this,&MainWindow::updateCursorPosition);
     connect(editor, &CodeEditor::bracketMatched, m_catWidget, &CatWidget::onBracketMatched);
     connect(editor, &CodeEditor::codeDeleted, m_catWidget, &CatWidget::onCodeDeleted);
