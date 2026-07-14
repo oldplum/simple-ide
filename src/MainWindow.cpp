@@ -15,6 +15,8 @@
 #include <QTextStream>
 #include <QStatusBar>
 #include <QTextCursor>
+#include <QDockWidget>
+#include <QShortcut>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -164,6 +166,28 @@ MainWindow::MainWindow(QWidget *parent)
             &QAction::triggered,
             this,
             &MainWindow::close);
+
+
+    // 电子猫咪模块初始化
+    m_catWidget = new CatWidget(this);
+    
+    // 用 QDockWidget 将猫咪挂在主界面右侧
+    QDockWidget *dock = new QDockWidget(tr("代码伴侣"), this);
+    dock->setWidget(m_catWidget);
+    dock->setAllowedAreas(Qt::RightDockWidgetArea | Qt::LeftDockWidgetArea);
+    // 固定宽度防止太宽
+    dock->setMinimumWidth(150);
+    dock->setMaximumWidth(200);
+    addDockWidget(Qt::RightDockWidgetArea, dock);
+
+    // 添加到菜单栏，允许用户随时打开或关闭猫咪
+    QMenu *viewMenu = menuBar()->addMenu(tr("视图(&V)"));
+    viewMenu->addAction(dock->toggleViewAction());
+
+    // 绑定快捷键 Ctrl+Shift+F 进行投喂
+    QShortcut *feedShortcut = new QShortcut(QKeySequence("Ctrl+Shift+F"), this);
+    connect(feedShortcut, &QShortcut::activated, m_catWidget, &CatWidget::feed);
+
     newFile();
 }
 
@@ -184,6 +208,8 @@ void MainWindow::newFile()
             &QPlainTextEdit::cursorPositionChanged,
             this,
             &MainWindow::updateCursorPosition);
+    connect(editor, &CodeEditor::bracketMatched, m_catWidget, &CatWidget::onBracketMatched);
+    connect(editor, &CodeEditor::codeDeleted, m_catWidget, &CatWidget::onCodeDeleted);
     new Highlighter(editor->document());
     connect(editor->document(),
             &QTextDocument::modificationChanged,
@@ -335,6 +361,8 @@ void MainWindow::openFile()
             &QPlainTextEdit::cursorPositionChanged,
             this,
             &MainWindow::updateCursorPosition);
+    connect(editor, &CodeEditor::bracketMatched, m_catWidget, &CatWidget::onBracketMatched);
+    connect(editor, &CodeEditor::codeDeleted, m_catWidget, &CatWidget::onCodeDeleted);
     QString ext = QFileInfo(filePath).suffix();
     new Highlighter(editor->document(), ext);
 

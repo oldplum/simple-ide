@@ -153,6 +153,9 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
 //实现回车时自动缩进
 void CodeEditor::keyPressEvent(QKeyEvent *e)
 {
+    if (e->key() == Qt::Key_Backspace || e->key() == Qt::Key_Delete)
+        emit codeDeleted();
+
     // 1. 如果按下的是回车键
     if (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter){
         // 获取光标所在行的文本
@@ -268,6 +271,9 @@ void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
 
         selections.append(sel1);
         selections.append(sel2);
+
+        emit bracketMatched();
+
     }
 }
 

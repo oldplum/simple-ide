@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "CatWidget.h"
 
 class   CodeEditor;
 class   QCloseEvent;
@@ -25,6 +26,7 @@ private:
     int untitledCount=1;
     CodeEditor *currentEditor() const;
     bool maybeSave(int index);
+    CatWidget *m_catWidget;
 
 private slots:
     void newFile();

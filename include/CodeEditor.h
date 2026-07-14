@@ -36,6 +36,10 @@ private:
     void matchBracket(QList<QTextEdit::ExtraSelection> &selections);
     void toggleFold(QTextBlock &startBlock); // 执行折叠/展开动作
     void updateFoldedBlocksVisibility();     // 动态刷新行的可见性
+
+signals:
+    void bracketMatched();
+    void codeDeleted();
 };
 
 // 行号区域控件，转发绘制事件给 CodeEditor
