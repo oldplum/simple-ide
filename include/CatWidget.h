@@ -34,6 +34,7 @@ private:
     void setState(CatState state);
     
     QLabel *m_imageLabel;
+    QLabel *m_statusLabel;
     QPushButton *m_feedButton;
     QMovie *m_currentMovie;
     

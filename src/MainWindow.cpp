@@ -3,7 +3,6 @@
 #include "CodeEditor.h"
 #include "Highlighter.h"
 #include "FindReplaceDialog.h"
-#include "CatWidget.h"
 #include <QCloseEvent>
 #include <QAction>
 #include <QKeySequence>
@@ -16,12 +15,11 @@
 #include <QTextStream>
 #include <QStatusBar>
 #include <QTextCursor>
+#include <QDockWidget>
+#include <QShortcut>
 #include <QApplication>
 #include <QSettings>
 #include <QStringList>
-#include <QDockWidget>
-#include <QShortcut>
-
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -271,48 +269,26 @@ MainWindow::MainWindow(QWidget *parent)
             &QAction::triggered,
             this,
             &MainWindow::close);
-   // newFile();
-    // 初始化电子猫
+
+    // 电子猫咪模块初始化
     m_catWidget = new CatWidget(this);
+    
+    // 用 QDockWidget 将猫咪挂在主界面右侧
+    QDockWidget *dock = new QDockWidget(tr("代码伴侣"), this);
+    dock->setWidget(m_catWidget);
+    dock->setAllowedAreas(Qt::RightDockWidgetArea | Qt::LeftDockWidgetArea);
+    // 固定宽度防止太宽
+    dock->setMinimumWidth(150);
+    dock->setMaximumWidth(200);
+    addDockWidget(Qt::RightDockWidgetArea, dock);
 
-    // 创建可停靠侧边栏
-    QDockWidget *catDock =
-            new QDockWidget(tr("代码伴侣"), this);
+    // 添加到菜单栏，允许用户随时打开或关闭猫咪
+    viewMenu->addAction(dock->toggleViewAction());
 
-    catDock->setObjectName("catDock");
-    catDock->setWidget(m_catWidget);
+    // 绑定快捷键 Ctrl+Shift+F 进行投喂
+    QShortcut *feedShortcut = new QShortcut(QKeySequence("Ctrl+Shift+F"), this);
+    connect(feedShortcut, &QShortcut::activated, m_catWidget, &CatWidget::feed);
 
-    catDock->setAllowedAreas(
-        Qt::LeftDockWidgetArea |
-        Qt::RightDockWidgetArea
-    );
-
-    catDock->setMinimumWidth(150);
-    catDock->setMaximumWidth(200);
-
-    addDockWidget(
-        Qt::RightDockWidgetArea,
-        catDock
-    );
-
-    // 加入已经存在的“视图”菜单
-    viewMenu->addSeparator();
-
-    QAction *catAction = catDock->toggleViewAction();
-    catAction->setText(tr("显示电子猫"));
-    viewMenu->addAction(catAction);
-
-    // Ctrl+Shift+F 投喂
-    QShortcut *feedShortcut =
-            new QShortcut(
-                QKeySequence("Ctrl+Shift+F"),
-                this
-            );
-
-    connect(feedShortcut,
-            &QShortcut::activated,
-            m_catWidget,
-            &CatWidget::feed);
     QSettings sessionSettings("SimpleIDE","SimpleIDE");
     restoreGeometry(sessionSettings.value("window/geometry").toByteArray());
     QStringList openFiles=sessionSettings.value("session/openFiles").toStringList();
@@ -347,27 +323,11 @@ void MainWindow::newFile()
 {
     CodeEditor *editor = new CodeEditor(ui->tabWidget);
     connect(editor,
-            &CodeEditor::bracketMatched,
-            m_catWidget,
-            &CatWidget::onBracketMatched);
-
-    connect(editor,
-            &CodeEditor::codeDeleted,
-            m_catWidget,
-            &CatWidget::onCodeDeleted);
-    connect(editor,
-            &CodeEditor::bracketMatched,
-            m_catWidget,
-            &CatWidget::onBracketMatched);
-
-    connect(editor,
-            &CodeEditor::codeDeleted,
-            m_catWidget,
-            &CatWidget::onCodeDeleted);
-    connect(editor,
             &QPlainTextEdit::cursorPositionChanged,
             this,
             &MainWindow::updateCursorPosition);
+    connect(editor, &CodeEditor::bracketMatched, m_catWidget, &CatWidget::onBracketMatched);
+    connect(editor, &CodeEditor::codeDeleted, m_catWidget, &CatWidget::onCodeDeleted);
     new Highlighter(editor->document());
     connect(editor->document(),
             &QTextDocument::modificationChanged,
@@ -543,6 +503,8 @@ void MainWindow::openFile()
             &QPlainTextEdit::cursorPositionChanged,
             this,
             &MainWindow::updateCursorPosition);
+    connect(editor, &CodeEditor::bracketMatched, m_catWidget, &CatWidget::onBracketMatched);
+    connect(editor, &CodeEditor::codeDeleted, m_catWidget, &CatWidget::onCodeDeleted);
     QString ext = QFileInfo(filePath).suffix();
     new Highlighter(editor->document(), ext);
 
@@ -577,6 +539,8 @@ bool MainWindow::openFileFromPath(const QString &filePath)
     file.close();
     CodeEditor *editor=new CodeEditor(ui->tabWidget);
     connect(editor,&QPlainTextEdit::cursorPositionChanged,this,&MainWindow::updateCursorPosition);
+    connect(editor, &CodeEditor::bracketMatched, m_catWidget, &CatWidget::onBracketMatched);
+    connect(editor, &CodeEditor::codeDeleted, m_catWidget, &CatWidget::onCodeDeleted);
     QString extension=QFileInfo(filePath).suffix();
     new Highlighter(editor->document(),extension);
     editor->setPlainText(content);

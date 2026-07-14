@@ -53,8 +53,8 @@ FindReplaceDialog::FindReplaceDialog(QWidget *parent): QDialog(parent)
 
     // 垂直排开右侧按钮
     QVBoxLayout *rightLayout = new QVBoxLayout();
-    rightLayout->addWidget(m_findNextButton);
     rightLayout->addWidget(m_findPrevButton);
+    rightLayout->addWidget(m_findNextButton);
     rightLayout->addWidget(m_replaceButton);
     rightLayout->addWidget(m_replaceAllButton);
     rightLayout->addWidget(m_cancelButton);

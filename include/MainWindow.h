@@ -2,10 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include "CatWidget.h"
 
 class   CodeEditor;
 class   QCloseEvent;
-class   CatWidget;
 namespace Ui{
     class MainWindow;
 }
@@ -26,8 +26,8 @@ private:
     int untitledCount=1;
     CodeEditor *currentEditor() const;
     bool maybeSave(int index);
+    CatWidget *m_catWidget;
     bool openFileFromPath(const QString &filePath);
-    CatWidget *m_catWidget=nullptr;
 
 private slots:
     void newFile();
