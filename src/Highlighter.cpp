@@ -6,11 +6,13 @@
 #include <QDebug>
 #include "Highlighter.h"
 
+// 构造函数：需要传入一个文本文档指针（将其挂载上去），以及文件的扩展名（如 ".cpp"、".py" 用于决定加载哪套规则）
 Highlighter::Highlighter(QTextDocument *parent, const QString &extension): QSyntaxHighlighter(parent)
 {
     loadRulesFromFile(extension);
 }
 
+// 从外部 JSON 文件（位于 resources/rules 目录下）加载高亮规则的方法
 void Highlighter::loadRulesFromFile(const QString &ext)
 {
     // 1. 将后缀名映射为对应的 JSON 文件名
@@ -90,6 +92,7 @@ void Highlighter::loadRulesFromFile(const QString &ext)
     }
 }
 
+// 重写系统函数：Qt 每次需要高亮某一行时，就会自动回调这个函数。参数 text 就是那一行的纯文本内容。
 void Highlighter::highlightBlock(const QString &text)
 {
     // 1.遍历所有单行高亮规则
