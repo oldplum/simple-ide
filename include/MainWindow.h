@@ -25,6 +25,7 @@ private:
     int untitledCount=1;
     CodeEditor *currentEditor() const;
     bool maybeSave(int index);
+    bool openFileFromPath(const QString &filePath);
 
 private slots:
     void newFile();

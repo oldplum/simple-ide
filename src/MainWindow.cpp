@@ -15,6 +15,10 @@
 #include <QTextStream>
 #include <QStatusBar>
 #include <QTextCursor>
+#include <QApplication>
+#include <QSettings>
+#include <QStringList>
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -36,6 +40,106 @@ MainWindow::MainWindow(QWidget *parent)
             });
     QMenu *fileMenu = menuBar()->addMenu(tr("文件(&F)"));
     QMenu *editMenu =menuBar()->addMenu(tr("编辑(&E)"));
+    QMenu *viewMenu=menuBar()->addMenu(tr("视图(&V)"));
+    QAction *lightThemeAction=
+            viewMenu->addAction(tr("浅色主题"));
+    connect(lightThemeAction, &QAction::triggered, this, []() {
+        qApp->setStyleSheet(QString());
+        QSettings settings("SimpleIDE","SimpleIDE");
+        settings.setValue("theme","light");
+    });
+    QAction *darkThemeAction=
+            viewMenu->addAction(tr("深色主题"));
+    connect(darkThemeAction, &QAction::triggered, this, []() {
+        qApp->setStyleSheet(R"(
+            QMainWindow {
+                background-color: #202124;
+            }
+
+            QMenuBar {
+                background-color: #2b2b2b;
+                color: #eeeeee;
+            }
+
+            QMenuBar::item:selected {
+                background-color: #3c3f41;
+            }
+
+            QMenu {
+                background-color: #2b2b2b;
+                color: #eeeeee;
+            }
+
+            QMenu::item:selected {
+                background-color: #3c78d8;
+            }
+
+            QTabWidget::pane {
+                border: 1px solid #444444;
+            }
+
+            QTabBar::tab {
+                background-color: #2b2b2b;
+                color: #dddddd;
+                padding: 6px 12px;
+            }
+
+            QTabBar::tab:selected {
+                background-color: #3c3f41;
+            }
+
+            QPlainTextEdit {
+                background-color: #1e1e1e;
+                color: #eeeeee;
+                selection-background-color: #264f78;
+            }
+
+            QStatusBar {
+                background-color: #2b2b2b;
+                color: #dddddd;
+            }
+
+            QDialog {
+                background-color: #2b2b2b;
+                color: #eeeeee;
+            }
+
+            QLabel,
+            QCheckBox {
+                color: #eeeeee;
+            }
+
+            QLineEdit {
+                background-color: #3c3f41;
+                color: #eeeeee;
+                border: 1px solid #555555;
+                padding: 4px;
+            }
+
+            QPushButton {
+                background-color: #3c3f41;
+                color: #eeeeee;
+                border: 1px solid #555555;
+                padding: 5px 12px;
+            }
+
+            QPushButton:hover {
+                background-color: #4b4f52;
+            }
+        )");
+        QSettings settings("SimpleIDE","SimpleIDE");
+        settings.setValue("theme","dark");
+    });
+    QSettings settings("SimpleIDE","SimpleIDE");
+    QString savedTheme=settings.value("theme","light").toString();
+    if(savedTheme=="dark")
+    {
+        darkThemeAction->trigger();
+    }
+    else
+    {
+        lightThemeAction->trigger();
+    }
     QAction *undoAction = editMenu->addAction(tr("撤销(&U)"));
     undoAction->setShortcut(QKeySequence::Undo);
     connect(undoAction, &QAction::triggered, this, [this]() {
@@ -164,7 +268,25 @@ MainWindow::MainWindow(QWidget *parent)
             &QAction::triggered,
             this,
             &MainWindow::close);
-    newFile();
+   // newFile();
+    QSettings sessionSettings("SimpleIDE","SimpleIDE");
+    restoreGeometry(sessionSettings.value("window/geometry").toByteArray());
+    QStringList openFiles=sessionSettings.value("session/openFiles").toStringList();
+    QString activeFile=sessionSettings.value("session/activeFile").toString();
+    for(const QString &filePath:openFiles){
+        openFileFromPath(filePath);
+    }
+    for(int index=0;index<ui->tabWidget->count();++index)
+    {
+        CodeEditor *editor =qobject_cast<CodeEditor *>( ui->tabWidget->widget(index));
+        if(editor!=nullptr&&editor->property("filePath").toString()==activeFile){
+            ui->tabWidget->setCurrentIndex(index);
+            break;
+        }
+    }
+    if(ui->tabWidget->count()==0){
+        newFile();
+    }
 }
 
 MainWindow::~MainWindow()
@@ -285,12 +407,36 @@ bool MainWindow::maybeSave(int index)
 }
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    CodeEditor *activeEditor=currentEditor();
     for(int index=0;index<ui->tabWidget->count();++index)
     {
         if(!maybeSave(index)){
             event->ignore();
             return;
         }
+    }
+    QStringList openFiles;
+    for(int index=0;index<ui->tabWidget->count();++index)
+    {
+        CodeEditor *editor=qobject_cast<CodeEditor*>(ui->tabWidget->widget(index));
+        if(editor==nullptr){
+            continue;
+        }
+        QString filePath=editor->property("filePath").toString();
+        if(!filePath.isEmpty())
+        {
+            openFiles.append(filePath);
+        }
+    }
+    QSettings settings("SimpleIDE","SimpleIDE");
+    settings.setValue("window/geometry",saveGeometry());
+    settings.setValue("session/openFiles",openFiles);
+    if(activeEditor!=nullptr){
+        settings.setValue("session/activeFile",activeEditor->property("filePath").toString());
+    }
+    else
+    {
+        settings.remove("session/activeFile");
     }
     event->accept();
 }
@@ -317,8 +463,8 @@ void MainWindow::openFile()
     if(filePath.isEmpty()){
         return;
     }
-    QFile file(filePath);
-    if(!file.open((QIODevice::ReadOnly|QIODevice::Text))){
+    //QFile file(filePath);
+    if(!openFileFromPath(filePath)){
         QMessageBox::warning(
                     this,
                     tr("打开失败,"),
@@ -326,7 +472,7 @@ void MainWindow::openFile()
                     );
         return;
     }
-    QTextStream stream(&file);
+    /*QTextStream stream(&file);
     stream.setCodec("UTF-8");
     QString content=stream.readAll();
     file.close();
@@ -344,7 +490,41 @@ void MainWindow::openFile()
     QString fileName=QFileInfo(filePath).fileName();
     editor->setProperty("baseName",fileName);
     int index=ui->tabWidget->addTab(editor,fileName);
+    ui->tabWidget->setCurrentIndex(index);*/
+}
+bool MainWindow::openFileFromPath(const QString &filePath)
+{
+    if(filePath.isEmpty()||!QFileInfo::exists(filePath)){
+        return false;
+    }
+    for(int index=0;index<ui->tabWidget->count();++index)
+    {
+        CodeEditor *editor=qobject_cast<CodeEditor*>(ui->tabWidget->widget(index));
+        if(editor!=nullptr&&editor->property("filePath").toString()==filePath){
+            ui->tabWidget->setCurrentIndex(index);
+            return true;
+        }
+    }
+    QFile file(filePath);
+    if(!file.open(QIODevice::ReadOnly|QIODevice::Text)){
+        return false;
+    }
+    QTextStream stream(&file);
+    stream.setCodec("UTF-8");
+    QString content=stream.readAll();
+    file.close();
+    CodeEditor *editor=new CodeEditor(ui->tabWidget);
+    connect(editor,&QPlainTextEdit::cursorPositionChanged,this,&MainWindow::updateCursorPosition);
+    QString extension=QFileInfo(filePath).suffix();
+    new Highlighter(editor->document(),extension);
+    editor->setPlainText(content);
+    editor->setProperty("filePath",filePath);
+    QString fileName=QFileInfo(filePath).fileName();
+    editor->setProperty("baseName",fileName);
+    editor->document()->setModified(false);
+    int index=ui->tabWidget->addTab(editor,fileName);
     ui->tabWidget->setCurrentIndex(index);
+    return true;
 }
 void MainWindow::saveFileAs()
 {
