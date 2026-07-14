@@ -32,6 +32,7 @@ private slots:
     void closeTab(int index);
     void saveFile();
     void saveFileAs();
+    void updateCursorPosition();
 
 signals:
 

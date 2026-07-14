@@ -13,6 +13,8 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QTextStream>
+#include <QStatusBar>
+#include <QTextCursor>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
@@ -26,6 +28,12 @@ MainWindow::MainWindow(QWidget *parent)
             &QTabWidget::tabCloseRequested,
             this,
             &MainWindow::closeTab);
+    connect(ui->tabWidget,
+            &QTabWidget::currentChanged,
+            this,
+            [this](int) {
+                updateCursorPosition();
+            });
     QMenu *fileMenu = menuBar()->addMenu(tr("文件(&F)"));
     QMenu *editMenu =menuBar()->addMenu(tr("编辑(&E)"));
     QAction *undoAction = editMenu->addAction(tr("撤销(&U)"));
@@ -172,7 +180,11 @@ CodeEditor *MainWindow::currentEditor() const
 void MainWindow::newFile()
 {
     CodeEditor *editor = new CodeEditor(ui->tabWidget);
-    new Highlighter(editor->document());  // 绑定语法高亮
+    connect(editor,
+            &QPlainTextEdit::cursorPositionChanged,
+            this,
+            &MainWindow::updateCursorPosition);
+    new Highlighter(editor->document());
     connect(editor->document(),
             &QTextDocument::modificationChanged,
             this,
@@ -319,7 +331,10 @@ void MainWindow::openFile()
     QString content=stream.readAll();
     file.close();
     CodeEditor *editor=new CodeEditor(ui->tabWidget);
-    // 提取文件后缀名传给高亮器，比如 "cpp", "json", "py"
+    connect(editor,
+            &QPlainTextEdit::cursorPositionChanged,
+            this,
+            &MainWindow::updateCursorPosition);
     QString ext = QFileInfo(filePath).suffix();
     new Highlighter(editor->document(), ext);
 
@@ -373,4 +388,19 @@ void MainWindow::saveFileAs()
                     QFileInfo(filePath).fileName()
                     );
     }
+}
+void MainWindow::updateCursorPosition()
+{
+    CodeEditor *editor=currentEditor();
+    if(editor==nullptr)
+    {
+        statusBar()->showMessage(tr("就绪"));
+        return;
+    }
+    QTextCursor cursor = editor->textCursor();
+    int line=cursor.blockNumber()+1;
+    int column=cursor.positionInBlock()+1;
+    statusBar()->showMessage(
+                tr("第%1行，第%2列").arg(line).arg(column)
+                );
 }

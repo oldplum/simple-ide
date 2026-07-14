@@ -36,7 +36,7 @@ void CodeEditor::highlightCurrentline(){
 
     QTextEdit::ExtraSelection selection;
 
-    selection.format.setBackground(QColor(232, 232, 232));
+    selection.format.setBackground(QColor(128,128,128,45));
     selection.format.setProperty(QTextFormat::FullWidthSelection, true);
     selection.cursor = textCursor();
     selection.cursor.clearSelection();
@@ -91,7 +91,18 @@ void CodeEditor::resizeEvent(QResizeEvent *event)
 void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
 {
     QPainter painter(lineNumberArea);
-    painter.fillRect(event->rect(), Qt::lightGray);
+    QColor editorBackground=palette().color(QPalette::Base);
+    QColor gutterBackground;
+    QColor gutterText;
+    if(editorBackground.lightness()<120){
+        gutterText=QColor(150,150,150);
+        gutterBackground=QColor(37,37,38);
+    }
+    else{
+        gutterText=QColor(90,90,90);
+        gutterBackground=QColor(240,240,240);
+    }
+    painter.fillRect(event->rect(),gutterBackground);
 
     QTextBlock block = firstVisibleBlock();
     int blockNumber = block.blockNumber();
@@ -109,7 +120,7 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
         // 只有当行真正可见，且在绘制区域内时才绘制
         if (block.isVisible() && bottom >= event->rect().top()){
             QString number = QString::number(blockNumber + 1);
-            painter.setPen(Qt::darkGray);
+            painter.setPen(gutterText);
             
             // 行号文字偏左，留出右侧 15px 空间画折叠小方块
             int widthForNumber = lineNumberArea->width() - 15;
@@ -120,7 +131,7 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
             if (data && data->isFoldStart()){
                 QRect rect(lineNumberArea->width() - 13, top + (fontMetrics().height() - 10) / 2, 10, 10);
                 painter.save();
-                painter.setPen(Qt::darkGray);
+                painter.setPen(gutterText);
                 painter.setBrush(Qt::NoBrush);
                 painter.drawRect(rect);
                 // 绘制一条横线表示减号
