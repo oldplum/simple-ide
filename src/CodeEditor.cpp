@@ -405,11 +405,14 @@ void CodeEditor::replaceAll(const QString &text, const QString &replaceText, boo
 }
 
 
-// 重新计算嵌套层级与折叠起点
+// 计算嵌套层级与折叠起点
 void CodeEditor::recalculateFolding()
 {
     QTextBlock block = document()->begin();
     int currentLevel = 0;
+
+    // 使用 QList 模拟栈，记录尚未匹配到 '}' 的折叠起点数据
+    QList<FoldingUserData*> openFolds;
     
     while (block.isValid()){
         QString text = block.text();
@@ -422,16 +425,29 @@ void CodeEditor::recalculateFolding()
             block.setUserData(data);
         }
         
-        // 含有 { 且不含有 } 的行作为折叠起点
-        data->setFoldStart(hasOpenBrace && !hasCloseBrace);
+        // 一开始默认当前行不是折叠起点
+        data->setFoldStart(false); 
         data->setFoldingLevel(currentLevel);
-        
-        // 更新嵌套深度
-        if (hasOpenBrace) 
+
+        // 处理左括号
+        if (hasOpenBrace){
             currentLevel++;
-        if (hasCloseBrace) 
+            if (!hasCloseBrace)
+                openFolds.push_back(data); // 如果当前行只有 '{'，先把它推入栈中等待匹配
+        }
+
+        // 处理右括号
+        if (hasCloseBrace){
             currentLevel = qMax(0, currentLevel - 1);
-        
+            if (!hasOpenBrace){
+                // 如果遇到了“单身” '}'，且栈里有等待的 '{'
+                if (!openFolds.isEmpty()){
+                    // 匹配成功！把最近的一个 '{' 设置为真正的折叠起点
+                    FoldingUserData *matchedStart = openFolds.takeLast();
+                    matchedStart->setFoldStart(true);
+                }
+            }
+        }
         block = block.next();
     }
 }
