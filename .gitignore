@@ -15,3 +15,8 @@ simple_ide
 *~
 
 PROJECT_DESIGN_DOC_TEMPLATE_BLANK/
+
+# 忽略的分工与要求文件（不提交到远程）
+docs/项目分工.md
+docs/项目要求.md
+
