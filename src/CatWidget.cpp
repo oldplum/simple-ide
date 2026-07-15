@@ -6,10 +6,8 @@
 #include <QPushButton>
 #include <QImageReader>
 
-// 构造函数，初始化 UI 控件（标签、按钮）并启动饥饿倒计时
 CatWidget::CatWidget(QWidget *parent): QWidget(parent), m_currentMovie(nullptr), m_currentState(Default), m_hungerLevel(0)
 {
-    // 设置猫咪窗口大小和悬浮属性
     setFixedSize(200, 200);
     setToolTip(tr("快捷键 Ctrl+Shift+F 也可以投喂猫粮哦！"));
     
@@ -31,24 +29,21 @@ CatWidget::CatWidget(QWidget *parent): QWidget(parent), m_currentMovie(nullptr),
     layout->addWidget(m_statusLabel);
     layout->addWidget(m_feedButton);
     
-    // 初始化定时器
     m_moodTimer = new QTimer(this);
     m_moodTimer->setSingleShot(true);
     connect(m_moodTimer, &QTimer::timeout, this, &CatWidget::resetToDefault);
     
     m_hungerTimer = new QTimer(this);
     connect(m_hungerTimer, &QTimer::timeout, this, &CatWidget::updateHunger);
-    m_hungerTimer->start(10000); // 测试用：每10秒增加一次饥饿度，真实可用60000(1分钟)
+    m_hungerTimer->start(10000); 
 
     setState(Default);
 }
 
-// 统一的状态切换入口：负责停止旧动画，加载新动画，防止内存泄漏和状态冲突
 void CatWidget::setState(CatState state)
 {
     m_currentState = state;
     
-    // 决定要加载的动图名字
     QString fileName;
     QString textPlaceholder;
     switch(state){
@@ -58,7 +53,6 @@ void CatWidget::setState(CatState state)
         case Hungry : fileName = "hungry" ; textPlaceholder = "( 饿了... )"; break;
     } 
     
-    // 尝试寻找动图或静态图片文件 (支持 .gif 和 .png)
     QString basePath = QCoreApplication::applicationDirPath() + "/../resources/cat_gifs/" + fileName;
     QString path = "";
     if (QFile::exists(basePath + ".gif"))
@@ -71,7 +65,6 @@ void CatWidget::setState(CatState state)
             m_currentMovie->deleteLater();
         m_currentMovie = new QMovie(path);
 
-        // 使用 QImageReader 快速读取原始尺寸并等比例缩放
         QImageReader reader(path);
         QSize imgSize = reader.size();
         if (imgSize.isValid()){
@@ -79,19 +72,17 @@ void CatWidget::setState(CatState state)
             m_currentMovie->setScaledSize(imgSize);
         } 
         else
-            m_currentMovie->setScaledSize(QSize(160, 140)); // 降级处理
+            m_currentMovie->setScaledSize(QSize(160, 140)); 
 
         m_imageLabel->setMovie(m_currentMovie);
         m_currentMovie->start();
     } 
     else{
-        // 如果没有图片，先用文字和背景颜色占位
         m_imageLabel->setText("🐱\n" + textPlaceholder);
         QString color = (state == Happy) ? "lightgreen" : (state == Angry) ? "lightcoral" : (state == Hungry) ? "khaki" : "lightgray";
         m_imageLabel->setStyleSheet("QLabel { background-color: " + color + "; border-radius: 10px; font-weight: bold;}");
     }
     
-    // 动态显示饥饿提示文字
     if (state == Hungry){
         m_statusLabel->setText(tr("喵~ 饿了……"));
         m_statusLabel->show();
@@ -100,25 +91,22 @@ void CatWidget::setState(CatState state)
         m_statusLabel->hide();
 }
 
-// 匹配括号 -> 切换为开心状态（Happy）
 void CatWidget::onBracketMatched()
 {
     if (m_currentState == Hungry) 
-        return; // 饿的时候不开心
+        return; 
     setState(Happy);
-    m_moodTimer->start(3000); // 开心3秒
+    m_moodTimer->start(3000); 
 }
 
-// 狂删代码 -> 切换为生气状态（Angry）
 void CatWidget::onCodeDeleted()
 {
     if (m_currentState == Hungry) 
-        return; // 饿的时候没力气生气
+        return; 
     setState(Angry);
-    m_moodTimer->start(3000); // 生气3秒
+    m_moodTimer->start(3000); 
 }
 
-// 用户主动投喂 -> 重置饥饿度，满血复活并强制开心
 void CatWidget::feed()
 {
     m_hungerLevel = 0;
@@ -126,18 +114,16 @@ void CatWidget::feed()
     m_moodTimer->start(4000);
 }
 
-// 饥饿定时器超时触发：暗中增加饥饿度，若到达阈值则锁死为 Hungry 状态
 void CatWidget::updateHunger()
 {
     if (m_currentState == Hungry) 
         return;
     
     m_hungerLevel++;
-    if (m_hungerLevel >= 3) // 测试用：累积3次就饿了
+    if (m_hungerLevel >= 3) 
         setState(Hungry);
 }
 
-// 情绪定时器超时触发：情绪平复，自动从喜/怒重置回 Default（默认）状态
 void CatWidget::resetToDefault()
 {
     if (m_hungerLevel >= 3)

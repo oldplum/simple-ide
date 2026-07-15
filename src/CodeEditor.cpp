@@ -6,16 +6,12 @@
 #include <QMessageBox>
 #include <QRegularExpression>
 
-// 构造函数，初始化行号栏、高亮连接等
 CodeEditor::CodeEditor(QWidget *parent): QPlainTextEdit(parent)  
 {
-    // 创建行号区域
     lineNumberArea = new LineNumberArea(this);
 
-    // 行数变化 → 更新行号栏宽度
     connect(this, &QPlainTextEdit::blockCountChanged,
             this, &CodeEditor::updateLineNumberAreaWidth);
-    // 滚动 → 同步行号栏
     connect(this, &QPlainTextEdit::updateRequest,
             this, &CodeEditor::updateLineNumberArea);
 
@@ -26,13 +22,11 @@ CodeEditor::CodeEditor(QWidget *parent): QPlainTextEdit(parent)
     
     highlightCurrentline();
 
-    // 监听文本变化以动态重新计算折叠层级
     connect(this, &QPlainTextEdit::textChanged, this, &CodeEditor::recalculateFolding);
     recalculateFolding();
 
 }
 
-// 当前光标所在行的高亮逻辑（包含整行浅灰背景以及调用matchBracket）
 void CodeEditor::highlightCurrentline(){
     QList<QTextEdit::ExtraSelection> selections;
 
@@ -44,11 +38,10 @@ void CodeEditor::highlightCurrentline(){
     selection.cursor.clearSelection();
     selections.append(selection);
 
-    matchBracket(selections); //调用括号匹配算法
+    matchBracket(selections); 
     setExtraSelections(selections);
 }
 
-// 计算行号栏需要占用的物理宽度（像素），随最大行数变化
 int CodeEditor::LineNumberAreaWidth()
 {
     int digits = 1;
@@ -61,13 +54,11 @@ int CodeEditor::LineNumberAreaWidth()
     return space;
 }
 
-// 槽函数：当文档的总行数（BlockCount）发生变化时，重新分配左侧行号栏的宽度
-void CodeEditor::updateLineNumberAreaWidth(int /* newBlockCount */)
+void CodeEditor::updateLineNumberAreaWidth(int )
 {
     setViewportMargins(LineNumberAreaWidth(), 0, 0, 0);
 }
 
-// 槽函数：当编辑器滚动时（发生垂直偏移 dy），同步滚动和刷新左侧行号栏的绘制区域
 void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
 {
     if (dy){
@@ -80,7 +71,6 @@ void CodeEditor::updateLineNumberArea(const QRect &rect, int dy)
     }
 }
 
-// 重写：窗口大小改变时，调整内部行号栏区域(lineNumberArea)的几何尺寸 (setGeometry)
 void CodeEditor::resizeEvent(QResizeEvent *event)
 {
     QPlainTextEdit::resizeEvent(event);
@@ -88,7 +78,6 @@ void CodeEditor::resizeEvent(QResizeEvent *event)
     lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), LineNumberAreaWidth(), cr.height()));
 }
 
-// 绘制行号栏的具体逻辑（包括背景色和行号数字）
 void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
 {
     QPainter painter(lineNumberArea);
@@ -109,25 +98,20 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
     int blockNumber = block.blockNumber();
 
     while (block.isValid()){
-        // 直接获取当前行在视口中的真实几何矩形
         QRectF blockRect = blockBoundingGeometry(block).translated(contentOffset());
         int top = qRound(blockRect.top());
         int bottom = qRound(blockRect.bottom());
 
-        // 如果当前行已经超出了可见区域底部，直接结束循环
         if (top > event->rect().bottom())
             break;
 
-        // 只有当行真正可见，且在绘制区域内时才绘制
         if (block.isVisible() && bottom >= event->rect().top()){
             QString number = QString::number(blockNumber + 1);
             painter.setPen(gutterText);
             
-            // 行号文字偏左，留出右侧 15px 空间画折叠小方块
             int widthForNumber = lineNumberArea->width() - 15;
             painter.drawText(0, top, widthForNumber, fontMetrics().height(), Qt::AlignRight, number);
             
-            // 绘制折叠指示器 [+] 或 [-]
             FoldingUserData *data = dynamic_cast<FoldingUserData*>(block.userData());
             if (data && data->isFoldStart()){
                 QRect rect(lineNumberArea->width() - 13, top + (fontMetrics().height() - 10) / 2, 10, 10);
@@ -135,10 +119,8 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
                 painter.setPen(gutterText);
                 painter.setBrush(Qt::NoBrush);
                 painter.drawRect(rect);
-                // 绘制一条横线表示减号
                 painter.drawLine(rect.left() + 2, rect.top() + 5, rect.right() - 2, rect.top() + 5);
                 if (data->isFolded()){
-                    // 如果被折叠了，绘制一条竖线组成加号
                     painter.drawLine(rect.left() + 5, rect.top() + 2, rect.left() + 5, rect.bottom() - 2);
                 }
                 painter.restore();
@@ -146,24 +128,20 @@ void CodeEditor::LineNumberAreaPaintEvent(QPaintEvent *event)
         }
         
         block = block.next();
-        ++blockNumber; // 绝对行号依然正常递增
+        ++blockNumber; 
     }
 }
 
 
-// 重写：拦截键盘输入事件。如果是回车键，则读取上一行的前置空格实现自动缩进；如果是退格键，发射 codeDeleted 信号
 void CodeEditor::keyPressEvent(QKeyEvent *e)
 {
     if (e->key() == Qt::Key_Backspace || e->key() == Qt::Key_Delete)
         emit codeDeleted();
 
-    // 1. 如果按下的是回车键
     if (e->key() == Qt::Key_Return || e->key() == Qt::Key_Enter){
-        // 获取光标所在行的文本
         QTextCursor cursor = textCursor();
         QString lineText = cursor.block().text();
 
-        // 提取这行开头的缩进（把空格和 Tab 收集起来）
         QString indentation;
         for (int i = 0; i < lineText.length(); ++i){
             if (lineText.at(i).isSpace()){
@@ -173,21 +151,17 @@ void CodeEditor::keyPressEvent(QKeyEvent *e)
             }
         }
 
-        // 先让底层的编辑器完成“真正的换行”操作
         QPlainTextEdit::keyPressEvent(e);
 
-        // 然后在刚刚换下来的新行里，填入和上一行一模一样的空格
         if (!indentation.isEmpty()){
             insertPlainText(indentation);
         }
         return;
     }
 
-    // 2. 如果是其他按键，正常处理
     QPlainTextEdit::keyPressEvent(e);
 }
 
-// 核心算法：通过栈思想（遇到匹配+1，反向-1）向前或向后搜索匹配的括号对，并将其加入高亮选择区
 void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
 {
     QTextCursor cursor = textCursor();
@@ -196,25 +170,20 @@ void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
     if (pos == 0) 
         return;
 
-    // 获取光标左边和右边的字符
     QChar leftChar = doc->characterAt(pos - 1);
     QChar rightChar = doc->characterAt(pos);
 
-    // 定义需要匹配的括号对
     QString leftBrackets = "({[";
     QString rightBrackets = ")}]";
 
     int matchPos = -1;
     int bracketPos = -1;
 
-    // 1. 如果光标左侧或右侧是 左括号 '(' '{' '['
     if (leftBrackets.contains(rightChar) || leftBrackets.contains(leftChar)){
-        // 确定到底是哪一边匹配到了左括号
         bracketPos = leftBrackets.contains(rightChar) ? pos : pos - 1;
         QChar left = doc->characterAt(bracketPos);
         QChar right = rightBrackets.at(leftBrackets.indexOf(left));
         int count = 1;
-        // 往后找对应的右括号
         for (int i = bracketPos + 1; i < doc->characterCount(); ++i){
             QChar c = doc->characterAt(i);
             if (c == left) 
@@ -227,14 +196,11 @@ void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
             }
         }
     } 
-    // 2. 如果光标左侧或右侧是 右括号 ')' '}' ']'
     else if (rightBrackets.contains(leftChar) || rightBrackets.contains(rightChar)){
-        // 确定到底是哪一边匹配到了右括号
         bracketPos = rightBrackets.contains(leftChar) ? pos - 1 : pos;
         QChar right = doc->characterAt(bracketPos);
         QChar left = leftBrackets.at(rightBrackets.indexOf(right));
         int count = 1;
-        // 往前找对应的左括号
         for (int i = bracketPos - 1; i >= 0; --i){
             QChar c = doc->characterAt(i);
             if (c == right) 
@@ -248,23 +214,19 @@ void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
         }
     }
 
-    // 3. 如果找到了配对的括号，给它们上色
     if (matchPos != -1){
         QTextCharFormat format;
         format.setBackground(QColor(0, 0, 0, 50));
-        // format.setForeground(Qt::red); 
 
         QTextEdit::ExtraSelection sel1, sel2;
         sel1.format = format;
         sel2.format = format;
 
-        // 选中第一个括号
         QTextCursor c1 = textCursor();
         c1.setPosition(bracketPos);
         c1.setPosition(bracketPos + 1, QTextCursor::KeepAnchor);
         sel1.cursor = c1;
 
-        // 选中配对的第二个括号
         QTextCursor c2 = textCursor();
         c2.setPosition(matchPos);
         c2.setPosition(matchPos + 1, QTextCursor::KeepAnchor);
@@ -278,7 +240,6 @@ void CodeEditor::matchBracket(QList<QTextEdit::ExtraSelection> &selections)
     }
 }
 
-// 查找下一个/上一个，根据传入的标志组装查找参数
 void CodeEditor::findNext(const QString &text, bool caseSensitive, bool wholeWord, bool useRegex, bool backward)
 {
     QTextDocument::FindFlags flags;
@@ -300,16 +261,13 @@ void CodeEditor::findNext(const QString &text, bool caseSensitive, bool wholeWor
     else
         found = find(text, flags);
 
-    // 如果查到末尾没找到，我们回绕（Wrap-around）从头/尾继续找
     if (!found){
         QTextCursor cursor = textCursor();
         int savedPos = cursor.position();
 
-        // 移到文档开头（向下找）或文档末尾（向上找）
         cursor.movePosition(backward ? QTextCursor::End : QTextCursor::Start);
         setTextCursor(cursor);
 
-        // 重新查找一次
         if (useRegex){
             QRegularExpression::PatternOptions options = QRegularExpression::NoPatternOption;
             if (!caseSensitive)
@@ -320,7 +278,6 @@ void CodeEditor::findNext(const QString &text, bool caseSensitive, bool wholeWor
         else
             found = find(text, flags);
 
-        // 如果真的不存在，还原光标位置，并弹窗提示
         if (!found){
             cursor.setPosition(savedPos);
             setTextCursor(cursor);
@@ -329,12 +286,10 @@ void CodeEditor::findNext(const QString &text, bool caseSensitive, bool wholeWor
     }
 }
 
-// 替换当前选中的匹配文本，并查找下一个
 void CodeEditor::replace(const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex)
 {
     QTextCursor cursor = textCursor();
     
-    // 判断当前光标选中的文本，是否就是我们要查找的内容
     if (cursor.hasSelection()){
         QString selected = cursor.selectedText();
         bool match = false;
@@ -354,29 +309,24 @@ void CodeEditor::replace(const QString &text, const QString &replaceText, bool c
             match = (selected.compare(text, cs) == 0);
             
             if (match && wholeWord){
-                // 如果是全词匹配，要确保它有单词边界
                 QRegularExpression regex("\\b" + QRegularExpression::escape(text) + "\\b", 
                     caseSensitive ? QRegularExpression::NoPatternOption : QRegularExpression::CaseInsensitiveOption);
                 match = regex.match(selected).hasMatch();
             }
         }
 
-        // 如果光标处选中的词刚好匹配，直接替换
         if (match){
             cursor.insertText(replaceText);
         }
     }
     
-    // 替换后自动查找下一个
     findNext(text, caseSensitive, wholeWord, useRegex, false);
 }
 
-// 遍历全文，替换所有匹配到的文本
 void CodeEditor::replaceAll(const QString &text, const QString &replaceText, bool caseSensitive, bool wholeWord, bool useRegex)
 {
     QTextCursor originalCursor = textCursor();
     
-    // 将光标瞬间定位到文档开头
     QTextCursor searchCursor(document());
     searchCursor.movePosition(QTextCursor::Start);
     setTextCursor(searchCursor);
@@ -406,18 +356,15 @@ void CodeEditor::replaceAll(const QString &text, const QString &replaceText, boo
         }
     }while (found);
 
-    // 替换完成后，将光标还原回用户之前在的位置，并弹窗汇报战果
     setTextCursor(originalCursor);
     QMessageBox::information(this, tr("全部替换"), tr("替换完成！共替换了 %1 处。").arg(count));
 }
 
-// 槽函数：重新计算整个文档中花括号 `{}` 的嵌套层级，用于代码折叠功能
 void CodeEditor::recalculateFolding()
 {
     QTextBlock block = document()->begin();
     int currentLevel = 0;
 
-    // 使用 QList 模拟栈，记录尚未匹配到 '}' 的折叠起点数据
     QList<FoldingUserData*> openFolds;
     
     while (block.isValid()){
@@ -431,24 +378,19 @@ void CodeEditor::recalculateFolding()
             block.setUserData(data);
         }
         
-        // 一开始默认当前行不是折叠起点
         data->setFoldStart(false); 
         data->setFoldingLevel(currentLevel);
 
-        // 处理左括号
         if (hasOpenBrace){
             currentLevel++;
             if (!hasCloseBrace)
-                openFolds.push_back(data); // 如果当前行只有 '{'，先把它推入栈中等待匹配
+                openFolds.push_back(data); 
         }
 
-        // 处理右括号
         if (hasCloseBrace){
             currentLevel = qMax(0, currentLevel - 1);
             if (!hasOpenBrace){
-                // 如果遇到了“单身” '}'，且栈里有等待的 '{'
                 if (!openFolds.isEmpty()){
-                    // 匹配成功！把最近的一个 '{' 设置为真正的折叠起点
                     FoldingUserData *matchedStart = openFolds.takeLast();
                     matchedStart->setFoldStart(true);
                 }
@@ -458,7 +400,6 @@ void CodeEditor::recalculateFolding()
     }
 }
 
-// 执行折叠或展开动作的核心函数，根据当前块的折叠状态（FoldingUserData），隐藏或显示其子级代码块
 void CodeEditor::toggleFold(QTextBlock &startBlock)
 {
     FoldingUserData *startData = dynamic_cast<FoldingUserData*>(startBlock.userData());
@@ -469,20 +410,18 @@ void CodeEditor::toggleFold(QTextBlock &startBlock)
     updateFoldedBlocksVisibility();
 }
 
-// 遍历所有文本块（QTextBlock），根据它们的 m_isFolded 属性，动态刷新它们在编辑器中的可见性（setVisible）
 void CodeEditor::updateFoldedBlocksVisibility()
 {
     QTextBlock block = document()->begin();
-    int hideLevel = -1; // -1 表示可见，否则表示隐藏该嵌套级别之下的行
+    int hideLevel = -1; 
     
     while (block.isValid()){
         FoldingUserData *data = dynamic_cast<FoldingUserData*>(block.userData());
         
         if (hideLevel != -1){
-            // 如果遇到了包含 '}' 且层级刚好退回来的闭合行
             if (data && data->foldingLevel() == hideLevel + 1 && block.text().contains('}')) {
-                block.setVisible(true); // 闭合行保持可见！
-                hideLevel = -1;        // 在这里结束隐藏状态
+                block.setVisible(true); 
+                hideLevel = -1;        
             } 
             else {
                 block.setVisible(false);
@@ -501,10 +440,8 @@ void CodeEditor::updateFoldedBlocksVisibility()
     lineNumberArea->update();
 }
 
-// 处理在行号栏区域点击鼠标的事件（例如点击折叠代码块）
 void CodeEditor::lineNumberAreaMousePressEvent(QMouseEvent *event)
 {
-    // 如果点击的是行号栏最右侧 15px 以内的折叠按钮区
     if (event->x() >= lineNumberArea->width() - 15){
         int y = event->y();
         QTextBlock block = firstVisibleBlock();
@@ -522,7 +459,6 @@ void CodeEditor::lineNumberAreaMousePressEvent(QMouseEvent *event)
         }
     }
 }
-//按ctrl+鼠标滚轮改变字体大小
 void CodeEditor::wheelEvent(QWheelEvent *event)
 {
     if (event->modifiers().testFlag(Qt::ControlModifier)) {

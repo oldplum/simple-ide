@@ -41,4 +41,4 @@ signals:
 
 };
 
-#endif // MAINWINDOW_H
+#endif 

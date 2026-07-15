@@ -6,16 +6,13 @@
 #include <QDebug>
 #include "Highlighter.h"
 
-// 构造函数：需要传入一个文本文档指针（将其挂载上去），以及文件的扩展名（如 ".cpp"、".py" 用于决定加载哪套规则）
 Highlighter::Highlighter(QTextDocument *parent, const QString &extension): QSyntaxHighlighter(parent)
 {
     loadRulesFromFile(extension);
 }
 
-// 从外部 JSON 文件（位于 resources/rules 目录下）加载高亮规则的方法
 void Highlighter::loadRulesFromFile(const QString &ext)
 {
-    // 1. 将后缀名映射为对应的 JSON 文件名
     QString fileName;
     QString lowerExt = ext.toLower();
     if (lowerExt == "json") 
@@ -24,9 +21,8 @@ void Highlighter::loadRulesFromFile(const QString &ext)
         fileName = "python.json";
     else if (lowerExt == "cpp" || lowerExt == "c" || lowerExt == "h" || lowerExt == "cc" || lowerExt == "hpp") 
         fileName = "cpp.json";
-    else return; // 其他不支持的格式不加载高亮
+    else return; 
 
-    // 2. 智能搜寻配置文件的路径（兼容开发环境和未来打包环境）
     QStringList searchPaths = {
         "../resources/rules/" + fileName,
         "resources/rules/" + fileName,
@@ -46,7 +42,7 @@ void Highlighter::loadRulesFromFile(const QString &ext)
 
     if (!fileFound || !file.open(QIODevice::ReadOnly | QIODevice::Text)){
         qDebug() << "无法找到或打开高亮配置文件:" << fileName;
-        return; // 找不到规则文件，则不进行高亮
+        return; 
     }
 
     QByteArray data = file.readAll();
@@ -57,7 +53,6 @@ void Highlighter::loadRulesFromFile(const QString &ext)
         return;
     QJsonObject root = doc.object();
 
-    // 3. 解析单行规则 (关键字、数字、普通字符串等)
     if (root.contains("singleLineRules")){
         QJsonArray rulesArray = root["singleLineRules"].toArray();
         for (const QJsonValue &val : rulesArray){
@@ -76,7 +71,6 @@ void Highlighter::loadRulesFromFile(const QString &ext)
         }
     }
 
-    // 4. 解析多行块规则 (如多行注释、Python三引号等)
     if (root.contains("multiLineComment")){
         QJsonObject multiObj = root["multiLineComment"].toObject();
         commentStartExpression = QRegularExpression(multiObj["startPattern"].toString());
@@ -92,10 +86,8 @@ void Highlighter::loadRulesFromFile(const QString &ext)
     }
 }
 
-// 重写系统函数：Qt 每次需要高亮某一行时，就会自动回调这个函数。参数 text 就是那一行的纯文本内容。
 void Highlighter::highlightBlock(const QString &text)
 {
-    // 1.遍历所有单行高亮规则
     for (const HighlightRule &rule : qAsConst(m_rules)){
         QRegularExpressionMatchIterator it = rule.pattern.globalMatch(text);
         while (it.hasNext()){
@@ -103,24 +95,19 @@ void Highlighter::highlightBlock(const QString &text)
             setFormat(match.capturedStart(), match.capturedLength(), rule.format);
         }
     }
-    // 如果当前语言没有多行注释（比如 JSON），直接结束
     if (commentStartExpression.pattern().isEmpty())
         return;
 
-    // 2.处理多行注释 / 多行字符串
     setCurrentBlockState(0);
     int startIndex = 0;
     bool continuingFromPrevious = (previousBlockState() == 1);
 
-    // 如果上一行不是多行注释状态，那就从本行开头找开始符
     if (!continuingFromPrevious){
         QRegularExpressionMatch startMatch = commentStartExpression.match(text);
         startIndex = startMatch.hasMatch() ? startMatch.capturedStart() : -1;
     }
 
     while (startIndex >= 0){
-        // 如果是延续上一行的多行注释，从当前位置开始找结束符
-        // 否则跳过开始符的长度，避免 Python """ 把同一个位置当成结束
         int endSearchStart;
         if (continuingFromPrevious)
             endSearchStart = startIndex;
@@ -133,18 +120,15 @@ void Highlighter::highlightBlock(const QString &text)
         int endIndex = endMatch.hasMatch() ? endMatch.capturedStart() : -1;
         int commentLength;
         if (endIndex == -1){
-            // 本行没有找到结束符，注释延续到行尾，通知下一行继续
             setCurrentBlockState(1);
             commentLength = text.length() - startIndex;
         } 
         else
-            // 找到了结束符，计算这一段的长度
             commentLength = endIndex - startIndex + endMatch.capturedLength();
         setFormat(startIndex, commentLength, multiLineCommentFormat);
 
-        // 继续在当前行剩下的地方找有没有下一个开始符
         QRegularExpressionMatch nextStart = commentStartExpression.match(text, startIndex + commentLength);
         startIndex = nextStart.hasMatch() ? nextStart.capturedStart() : -1;
-        continuingFromPrevious = false; // 后续的匹配都是新的开始
+        continuingFromPrevious = false; 
     }
 }
