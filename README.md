@@ -1,4 +1,4 @@
-# Simple IDE — 轻量级跨平台代码编辑器与电子猫咪互动系统
+# Simple IDE — 轻量级跨平台代码编辑器与“电子猫娘”互动系统
 
 ## 项目概述
 
@@ -26,7 +26,7 @@
 *   提供专属的查找替换悬浮对话框。
 *   支持**大小写敏感**、**全词匹配**以及**正则表达式**三种查找检索模式，支持向上查找（查找上一个）与全部替换。
 
-### 4. 电子猫咪互动系统
+### 4. “电子猫娘”互动系统
 *   **四种情绪状态：** 默认（Default）、开心（Happy）、生气（Angry）和饥饿（Hungry），对应不同的 GIF 动图展示。
 *   **行为联动状态机：**
     *   **开心：** 当成功匹配大括号 `{}` 时触发。
@@ -53,7 +53,7 @@ simple_ide/
 │   ├── CodeEditor.cpp      # 代码编辑器类，包含行号绘制、括号匹配与折叠控制
 │   ├── Highlighter.cpp     # 正则语法高亮引擎实现
 │   ├── FindReplaceDialog.cpp # 查找与替换对话框实现
-│   └── CatWidget.cpp       # 电子猫咪状态机与交互控件实现
+│   └── CatWidget.cpp       # “电子猫娘”状态机与交互控件实现
 ├── include/                # .h 头文件声明
 │   ├── MainWindow.h
 │   ├── CodeEditor.h
@@ -61,7 +61,7 @@ simple_ide/
 │   ├── FindReplaceDialog.h
 │   └── CatWidget.h
 ├── resources/              # 静态资源目录
-│   └── cat_gifs/           # 存放电子猫咪各情绪的 GIF 动图
+│   └── cat_gifs/           # 存放“电子猫娘”各情绪的 GIF 动图
 ├── ui/                     # Qt Designer 界面文件目录（暂空，本项目采用纯代码布局）
 ├── docs/                   # 项目说明文档目录
 └── simple_ide.pro          # qmake 项目配置文件
